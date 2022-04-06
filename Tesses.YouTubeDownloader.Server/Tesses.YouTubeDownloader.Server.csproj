@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tesses.YouTubeDownloader\Tesses.YouTubeDownloader.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Tesses.WebServer" Version="1.0.1" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+     <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+</Project>

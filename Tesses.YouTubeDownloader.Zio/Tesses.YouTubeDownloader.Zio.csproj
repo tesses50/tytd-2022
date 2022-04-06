@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tesses.YouTubeDownloader\Tesses.YouTubeDownloader.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Zio" Version="0.14.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+     <LangVersion>8.0</LangVersion>
+      <IsPackable>true</IsPackable>
+       
+      <PackageId>Tesses.YouTubeDownloader.Zio</PackageId>
+    <Author>Mike Nolan</Author>
+    <Company>Tesses</Company>
+     <Version>1.0.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Description>Adds Zio filesystem support</Description>
+    <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
+    <PackageTags>YoutubeExplode, YouTube, YouTubeDownloader</PackageTags>
+    <RepositoryUrl>https://gitlab.tesses.cf/tesses50/tytd</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

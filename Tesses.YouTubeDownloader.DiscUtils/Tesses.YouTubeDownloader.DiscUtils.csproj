@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tesses.YouTubeDownloader\Tesses.YouTubeDownloader.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DiscUtils.Core" Version="0.16.13" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>8.0</LangVersion>
+     <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+</Project>
