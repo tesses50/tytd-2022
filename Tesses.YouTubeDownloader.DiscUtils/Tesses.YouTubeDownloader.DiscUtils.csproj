@@ -12,6 +12,18 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>8.0</LangVersion>
      <IsPackable>true</IsPackable>
+    
+      <PackageId>Tesses.YouTubeDownloader.DiscUtils</PackageId>
+    <Author>Mike Nolan</Author>
+    <Company>Tesses</Company>
+     <Version>1.0.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Description>Adds DiscUtils filesystem support</Description>
+    <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageTags>YoutubeExplode, YouTube, YouTubeDownloader</PackageTags>
+    <RepositoryUrl>https://gitlab.tesses.cf/tesses50/tytd</RepositoryUrl>
   </PropertyGroup>
 
 </Project>

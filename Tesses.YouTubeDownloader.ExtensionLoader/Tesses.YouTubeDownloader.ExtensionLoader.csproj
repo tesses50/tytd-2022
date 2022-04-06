@@ -16,6 +16,7 @@
     <FileVersion>1.0.0.0</FileVersion>
     <Description>Load Extensions into TYTD (Not Tested)</Description>
     <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
+     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageTags>YoutubeExplode, YouTube, YouTubeDownloader</PackageTags>
     <RepositoryUrl>https://gitlab.tesses.cf/tesses50/tytd</RepositoryUrl>
   </PropertyGroup>
