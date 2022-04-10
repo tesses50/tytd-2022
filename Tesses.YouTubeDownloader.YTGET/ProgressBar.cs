@@ -5,6 +5,7 @@ using System.Threading;
 /// <summary>
 /// An ASCII progress bar
 /// </summary>
+/// https://gist.github.com/DanielSWolf/0ab6a96899cc5377bf54
 public class ProgressBar : IDisposable, IProgress<double> {
 	private const int blockCount = 10;
 	private readonly TimeSpan animationInterval = TimeSpan.FromSeconds(1.0 / 8);
