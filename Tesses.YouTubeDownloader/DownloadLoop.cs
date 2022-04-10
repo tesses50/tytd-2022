@@ -26,7 +26,7 @@ namespace Tesses.YouTubeDownloader
                 var (Video, Resolution) = Dequeue(out hasAny);
                 if (hasAny)
                 {
-                    await DownloadVideoAsync(Video, Resolution, token);
+                    await DownloadVideoAsync(Video, Resolution, token,new Progress<double>(ReportProgress),true);
                 }
 
             }
@@ -75,21 +75,41 @@ namespace Tesses.YouTubeDownloader
                 }
             }
         }
-        private async Task DownloadVideoAsync(SavedVideo video, Resolution resolution, CancellationToken token)
+        public async Task DownloadNoQueue(SavedVideo info,Resolution resolution=Resolution.Mux,CancellationToken token=default(CancellationToken),IProgress<double> progress=null)
+        {
+          
+                await DownloadVideoAsync(info,resolution,token,progress,false);
+            
+        }
+
+        public async Task<SavedVideo> GetSavedVideoAsync(VideoId id)
+        {
+            VideoMediaContext context=new VideoMediaContext(id,Resolution.PreMuxed);
+            List<(SavedVideo Video,Resolution)> s=new List<(SavedVideo Video, Resolution)>();
+            await context.FillQueue(this,s);
+            if(s.Count> 0)
+            {
+                return s.First().Video;
+            }
+            return null;
+        }
+
+        
+        private async Task DownloadVideoAsync(SavedVideo video, Resolution resolution, CancellationToken token=default(CancellationToken),IProgress<double> progress=null,bool report=true)
         {
             switch (resolution)
             {
                 case Resolution.Mux:
-                    await DownloadVideoMuxedAsync(video,token);
+                    await DownloadVideoMuxedAsync(video,token,progress,report);
                     break;
                 case Resolution.PreMuxed:
-                    await DownloadPreMuxedVideoAsync(video, token);
+                    await DownloadPreMuxedVideoAsync(video, token,progress,report);
                     break;
                 case Resolution.AudioOnly:
-                    await DownloadAudioOnlyAsync(video,token);
+                    await DownloadAudioOnlyAsync(video,token,progress,report);
                     break;
                 case Resolution.VideoOnly:
-                    await DownloadVideoOnlyAsync(video,token);
+                    await DownloadVideoOnlyAsync(video,token,progress,report);
                     break;
             }
 
@@ -349,15 +369,15 @@ namespace Tesses.YouTubeDownloader
                 Directory.Delete("TYTD_TEMP",true);
                 return ret;
         }
-        private async Task DownloadVideoMuxedAsync(SavedVideo video,CancellationToken token)
+        private async Task DownloadVideoMuxedAsync(SavedVideo video,CancellationToken token,IProgress<double> progress,bool report=true)
         {
             bool isValid=true;
-            isValid=await DownloadVideoOnlyAsync(video,token);
+            isValid=await DownloadVideoOnlyAsync(video,token,progress,report);
             if(token.IsCancellationRequested || !isValid)
             {
                 return;
             }
-            isValid = await DownloadAudioOnlyAsync(video,token);
+            isValid = await DownloadAudioOnlyAsync(video,token,progress,report);
             if(token.IsCancellationRequested || !isValid)
             {
                 return;
@@ -367,6 +387,7 @@ namespace Tesses.YouTubeDownloader
              {
                  return;
              }
+             if(report)
             ReportStartVideo(video,Resolution.Mux,0);
              string complete = $"Muxed/{video.Id}.mkv";
              string incomplete = $"Muxed/{video.Id}incomplete.mkv";
@@ -376,12 +397,12 @@ namespace Tesses.YouTubeDownloader
             if(await Continue(complete))
             {
               
-                    if(await MuxVideosAsync(video,complete_vidonly,complete_audonly,incomplete,new Progress<double>(ReportProgress),token))
+                    if(await MuxVideosAsync(video,complete_vidonly,complete_audonly,incomplete,progress,token))
                     {
                         RenameFile(incomplete,complete);
                     }
             }
-            
+            if(report)
             ReportEndVideo(video,Resolution.Mux);
         }
         private void DeleteIfExists(string path)
@@ -391,10 +412,12 @@ namespace Tesses.YouTubeDownloader
                 File.Delete(path);
             }
         }
-        public async Task<bool> DownloadVideoOnlyAsync(SavedVideo video,CancellationToken token)
+        public async Task<bool> DownloadVideoOnlyAsync(SavedVideo video,CancellationToken token,IProgress<double> progress,bool report=true)
         {
+           
             bool ret=false;
-            var streams = await BestStreamInfo.GetBestStreams(this, video.Id, token, false);
+            var streams = await BestStreamInfo.GetBestStreams(this, video.Id, token, false); 
+            if(!can_download) return false;
             if(streams != null)
             {
                 await MoveLegacyStreams(video,streams);
@@ -412,16 +435,18 @@ namespace Tesses.YouTubeDownloader
                             {
                                 return false;
                             }
+                            if(report)
                             ReportStartVideo(video, Resolution.VideoOnly,streams.VideoOnlyStreamInfo.Size.Bytes);
                             long len=await GetLengthAsync(incomplete);
                             
                             using(var dest = await OpenOrCreateAsync(incomplete))
                             {
-                                ret=await CopyStreamAsync(strm,dest,len,streams.VideoOnlyStreamInfo.Size.Bytes,4096,new Progress<double>(ReportProgress),token);
+                                ret=await CopyStreamAsync(strm,dest,len,streams.VideoOnlyStreamInfo.Size.Bytes,4096,progress,token);
                             }
                             if(ret)
                             {
                                 RenameFile(incomplete,complete);
+                                if(report)
                                 ReportEndVideo(video, Resolution.VideoOnly);
                             }
                         }
@@ -482,10 +507,12 @@ namespace Tesses.YouTubeDownloader
                 
             }
         }
-        public async Task<bool> DownloadAudioOnlyAsync(SavedVideo video,CancellationToken token)
+        private async Task<bool> DownloadAudioOnlyAsync(SavedVideo video,CancellationToken token,IProgress<double> progress,bool report=true)
         {
+            
             bool ret=false;
             var streams = await BestStreamInfo.GetBestStreams(this, video.Id, token, false);
+            if(!can_download) return false;
             if(streams != null)
             {
                 string complete = $"AudioOnly/{video.Id}.{streams.AudioOnlyStreamInfo.Container}";
@@ -493,7 +520,7 @@ namespace Tesses.YouTubeDownloader
                 await MoveLegacyStreams(video,streams);
                 if(await Continue(complete))
                 {
-                  
+                    
                     streams = await BestStreamInfo.GetBestStreams(this,video.Id,token);
                     if(streams != null)
                     {
@@ -504,16 +531,18 @@ namespace Tesses.YouTubeDownloader
                             {
                                 return false;
                             }
+                            if(report)
                             ReportStartVideo(video, Resolution.AudioOnly,streams.AudioOnlyStreamInfo.Size.Bytes);
                             long len=await GetLengthAsync(incomplete);
                             
                             using(var dest = await OpenOrCreateAsync(incomplete))
                             {
-                                ret=await CopyStreamAsync(strm,dest,len,streams.AudioOnlyStreamInfo.Size.Bytes,4096,new Progress<double>(ReportProgress),token);
+                                ret=await CopyStreamAsync(strm,dest,len,streams.AudioOnlyStreamInfo.Size.Bytes,4096,progress,token);
                             }
                             if(ret)
                             {
                                 RenameFile(incomplete,complete);
+                                if(report)
                                 ReportEndVideo(video, Resolution.AudioOnly);
                             }
                         }
@@ -527,9 +556,10 @@ namespace Tesses.YouTubeDownloader
              //We know its resolution 
             return ret;
         }
-        private async Task DownloadPreMuxedVideoAsync(SavedVideo video, CancellationToken token)
+        private async Task DownloadPreMuxedVideoAsync(SavedVideo video, CancellationToken token,IProgress<double> progress,bool report=true)
         {
             var streams = await BestStreamInfo.GetBestStreams(this, video.Id, token, false);
+            if(!can_download) return;
             if(streams != null)
             {
                 await MoveLegacyStreams(video,streams);
@@ -549,17 +579,19 @@ namespace Tesses.YouTubeDownloader
                             {
                                 return;
                             }
+                            if(report)
                             ReportStartVideo(video,Resolution.PreMuxed,streams.MuxedStreamInfo.Size.Bytes);
                             long len=await GetLengthAsync(incomplete);
                             bool ret;
                             using(var dest = await OpenOrCreateAsync(incomplete))
                             {
-                                ret=await CopyStreamAsync(strm,dest,len,streams.MuxedStreamInfo.Size.Bytes,4096,new Progress<double>(ReportProgress),token);
+                                ret=await CopyStreamAsync(strm,dest,len,streams.MuxedStreamInfo.Size.Bytes,4096,progress,token);
                             }
                             //We know its resolution 
                             if(ret)
                             {
                                 RenameFile(incomplete,complete);
+                                if(report)
                                 ReportEndVideo(video, Resolution.PreMuxed); 
                             }
                         }

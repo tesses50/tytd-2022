@@ -241,6 +241,7 @@ namespace Tesses.YouTubeDownloader
                 audioInfo.AudioCodec=asi.AudioCodec;
                 AudioInfo = audioInfo;
             }
+            _si=info;
             //vsi.VideoCodec
         }
     }

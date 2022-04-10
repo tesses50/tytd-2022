@@ -8,6 +8,8 @@ using YoutubeExplode.Videos;
 using System.Linq;
 using System.IO;
 using System.Text;
+using YoutubeExplode.Playlists;
+using YoutubeExplode.Channels;
 
 namespace Tesses.YouTubeDownloader.Server
 {
@@ -94,22 +96,149 @@ namespace Tesses.YouTubeDownloader.Server
             );
             return asAscii;
         }
+     
         public override async Task GetAsync(ServerContext ctx)
         {
             string path=ctx.UrlAndQuery;
-            if(path.StartsWith("/File/"))
+            /*if(path.StartsWith("/File/NotConverted/"))
             {
-                using(var s = await baseCtl.OpenReadAsyncWithLength( WebUtility.UrlDecode(path.Substring(6))))
+                // redirect to new
+                // /File/NotConverted/xxxxxxxxxxx.mp4
+                string idmp4=WebUtility.UrlDecode(path.Substring(19));
+                if(idmp4.Length == 15)
+                {
+                    string id=Path.GetFileNameWithoutExtension(idmp4);
+                    string path2 = $"Info/{id}.json";
+                    
+                if(!await baseCtl.FileExistsAsync(path2))
+                 {
+                    await NotFoundServer.ServerNull.GetAsync(ctx);
+                    return;
+                 } var data= await baseCtl.ReadAllTextAsync(path2);
+                var data2=JsonConvert.DeserializeObject<SavedVideo>(data);
+              var loc=  await BestStreams.GetPathResolution(baseCtl,data2,Resolution.PreMuxed);
+                
+                if(!await baseCtl.FileExistsAsync(loc))
+                {
+                    await NotFoundServer.ServerNull.GetAsync(ctx);
+                    return;
+                }
+                using(var s = await baseCtl.OpenReadAsyncWithLength(loc))
+                {
+                    await ctx.SendStreamAsync(s,HeyRed.Mime.MimeTypesMap.GetMimeType(loc));
+                }
+
+                }
+            }
+            else if(path.StartsWith("/File/Converted/"))
+            {
+                // redirect to new
+                // /File/NotConverted/xxxxxxxxxxx.mp4
+                string idmp4=WebUtility.UrlDecode(path.Substring(16));
+                if(idmp4.Length == 15)
+                {
+                    string id=Path.GetFileNameWithoutExtension(idmp4);
+                    string path2 = $"Info/{id}.json";
+                    
+                if(!await baseCtl.FileExistsAsync(path2))
+                 {
+                    await NotFoundServer.ServerNull.GetAsync(ctx);
+                    return;
+                 } var data= await baseCtl.ReadAllTextAsync(path2);
+                var data2=JsonConvert.DeserializeObject<SavedVideo>(data);
+              var loc=  await BestStreams.GetPathResolution(baseCtl,data2,Resolution.Mux);
+                
+                if(!await baseCtl.FileExistsAsync(loc))
+                {
+                    await NotFoundServer.ServerNull.GetAsync(ctx);
+                    return;
+                }
+                using(var s = await baseCtl.OpenReadAsyncWithLength(loc))
+                {
+                    await ctx.SendStreamAsync(s,HeyRed.Mime.MimeTypesMap.GetMimeType(loc));
+                }
+
+                }
+            }
+           else if(path.StartsWith("/File/Audio/"))
+            {
+                // redirect to new
+                // /File/NotConverted/xxxxxxxxxxx.mp4
+                string idmp4=WebUtility.UrlDecode(path.Substring(12));
+                if(idmp4.Length == 15)
+                {
+                    string id=Path.GetFileNameWithoutExtension(idmp4);
+                    string path2 = $"Info/{id}.json";
+                    
+                if(!await baseCtl.FileExistsAsync(path2))
+                 {
+                    await NotFoundServer.ServerNull.GetAsync(ctx);
+                    return;
+                 } var data= await baseCtl.ReadAllTextAsync(path2);
+                var data2=JsonConvert.DeserializeObject<SavedVideo>(data);
+              var loc=  await BestStreams.GetPathResolution(baseCtl,data2,Resolution.AudioOnly);
+                
+                if(!await baseCtl.FileExistsAsync(loc))
+                {
+                    await NotFoundServer.ServerNull.GetAsync(ctx);
+                    return;
+                }
+                using(var s = await baseCtl.OpenReadAsyncWithLength(loc))
+                {
+                    await ctx.SendStreamAsync(s,HeyRed.Mime.MimeTypesMap.GetMimeType(loc));
+                }
+
+                }
+            }
+            else if(path.StartsWith("/File/Info/"))
+            {
+                 string idjson=WebUtility.UrlDecode(path.Substring(11));
+                 string path2 = $"Info/{idjson}";
+                 if(!await baseCtl.FileExistsAsync(path2))
+                 {
+                    await NotFoundServer.ServerNull.GetAsync(ctx);
+                    return;
+                 }
+                 var data= await baseCtl.ReadAllTextAsync(path2);
+                var data2=JsonConvert.DeserializeObject<SavedVideo>(data);
+                await ctx.SendJsonAsync(data2.ToLegacy());
+            }
+            else*/ if(path.StartsWith("/File/"))
+            {
+                string file=WebUtility.UrlDecode(path.Substring(6));
+                if(!await baseCtl.FileExistsAsync(file))
+                {
+                    await NotFoundServer.ServerNull.GetAsync(ctx);
+                    return;
+                }
+                using(var s = await baseCtl.OpenReadAsyncWithLength(file))
                 {
                     await ctx.SendStreamAsync(s);
                 }
-            }else if(path.StartsWith("/GetFiles/"))
+            }/*else if(path.StartsWith("/File-v2/"))
+            {
+                string file=WebUtility.UrlDecode(path.Substring(9));
+                if(!await baseCtl.FileExistsAsync(file))
+                {
+                    await NotFoundServer.ServerNull.GetAsync(ctx);
+                    return;
+                }
+                 using(var s = await baseCtl.OpenReadAsyncWithLength(file))
+                {
+                    await ctx.SendStreamAsync(s);
+                }
+            }*/
+            else if(path.StartsWith("/GetFiles/"))
             {
               await ctx.SendJsonAsync(baseCtl.EnumerateFiles( WebUtility.UrlDecode(path.Substring(10))).ToList());
             }else if(path.StartsWith("/GetDirectories/"))
             {
                  await ctx.SendJsonAsync(baseCtl.EnumerateDirectories( WebUtility.UrlDecode(path.Substring(16))).ToList());
-            }else if(path.StartsWith("/FileExists/"))
+            }else if(path.StartsWith("/FileExists-v2/"))
+            {
+                await ctx.SendTextAsync(baseCtl.FileExists(WebUtility.UrlDecode(path.Substring(15))) ? "true" : "false","text/plain");
+            }
+            else if(path.StartsWith("/FileExists/"))
             {
                 await ctx.SendTextAsync(baseCtl.FileExists(WebUtility.UrlDecode(path.Substring(12))) ? "true" : "false","text/plain");
             }else if(path.StartsWith("/DirectoryExists/"))
@@ -132,7 +261,7 @@ namespace Tesses.YouTubeDownloader.Server
                        {
                            
                            //Console.WriteLine("F is not null");
-                           string filename = Path.GetFileName(path0);
+                           string filename = $"{v.Title}-{Path.GetFileName(path0)}";
                            string header=GetVideoContentDisposition(filename).ToString();
                            ctx.ResponseHeaders.Add("Content-Disposition",header);
                             using(var strm = await baseCtl.OpenReadAsync(path0))
@@ -172,7 +301,7 @@ namespace Tesses.YouTubeDownloader.Server
                        {
                            
                            //Console.WriteLine("F is not null");
-                           string filename = Path.GetFileName(path0);
+                           string filename = $"{v.Title}-{Path.GetFileName(path0)}";
                            string header=GetVideoContentDisposition(filename).ToString();
                            ctx.ResponseHeaders.Add("Content-Disposition",header);
                             using(var strm = await baseCtl.OpenReadAsync(path0))
@@ -197,6 +326,10 @@ namespace Tesses.YouTubeDownloader.Server
         {
                 this.Downloader=downloader;
                 Add("/AddItem",AddItem);
+                Add("/AddChannel",AddChannel);
+                Add("/AddUser",AddUser);
+                Add("/AddPlaylist",AddPlaylist);
+                Add("/AddVideo",AddVideo);
                 Add("/Progress",ProgressFunc);
                 Add("/QueueList",QueueList);
         }
@@ -208,7 +341,7 @@ namespace Tesses.YouTubeDownloader.Server
         {
             await ctx.SendJsonAsync(Downloader.GetProgress());
         }
-         public async Task AddItem(ServerContext ctx)
+         public async Task AddVideo(ServerContext ctx)
         {
             string id;
             if(ctx.QueryParams.TryGetFirst("v",out id))
@@ -225,14 +358,110 @@ namespace Tesses.YouTubeDownloader.Server
                 VideoId? id1=VideoId.TryParse(id);
                 if(id1.HasValue)
                 {
-                    await Downloader.AddItemAsync(id1,resolution);
+                    await Downloader.AddVideoAsync(id1.Value,resolution);
                 }
             }                        
             await ctx.SendTextAsync(
                 $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
             );
         }    
-    
+            public async Task AddItem(ServerContext ctx)
+        {
+            string id;
+            if(ctx.QueryParams.TryGetFirst("v",out id))
+            {
+                Resolution resolution=Resolution.PreMuxed;
+                string res;
+                if(ctx.QueryParams.TryGetFirst("res",out res))
+                {
+                    if(!Enum.TryParse<Resolution>(res,out resolution))
+                    {
+                        resolution=Resolution.PreMuxed;
+                    }
+                }
+             
+                    await Downloader.AddItemAsync(id,resolution);
+                
+            }                        
+            await ctx.SendTextAsync(
+                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }    
+                public async Task AddUser(ServerContext ctx)
+        {
+            string id;
+            if(ctx.QueryParams.TryGetFirst("v",out id))
+            {
+                Resolution resolution=Resolution.PreMuxed;
+                string res;
+                if(ctx.QueryParams.TryGetFirst("res",out res))
+                {
+                    if(!Enum.TryParse<Resolution>(res,out resolution))
+                    {
+                        resolution=Resolution.PreMuxed;
+                    }
+                }
+                UserName? id1=UserName.TryParse(id);
+                if(id1.HasValue)
+                {
+                    await Downloader.AddUserAsync(id1.Value,resolution);
+                }
+            }                        
+            await ctx.SendTextAsync(
+                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }    
+   
+                public async Task AddChannel(ServerContext ctx)
+        {
+            string id;
+            if(ctx.QueryParams.TryGetFirst("v",out id))
+            {
+                Resolution resolution=Resolution.PreMuxed;
+                string res;
+                if(ctx.QueryParams.TryGetFirst("res",out res))
+                {
+                    if(!Enum.TryParse<Resolution>(res,out resolution))
+                    {
+                        resolution=Resolution.PreMuxed;
+                    }
+                }
+                ChannelId? id1=ChannelId.TryParse(id);
+                if(id1.HasValue)
+                {
+                    await Downloader.AddChannelAsync(id1.Value,resolution);
+                }
+            }                        
+            await ctx.SendTextAsync(
+                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }    
+   
+            public async Task AddPlaylist(ServerContext ctx)
+        {
+            string id;
+            if(ctx.QueryParams.TryGetFirst("v",out id))
+            {
+                Resolution resolution=Resolution.PreMuxed;
+                string res;
+                if(ctx.QueryParams.TryGetFirst("res",out res))
+                {
+                    if(!Enum.TryParse<Resolution>(res,out resolution))
+                    {
+                        resolution=Resolution.PreMuxed;
+                    }
+                }
+                PlaylistId? id1=PlaylistId.TryParse(id);
+                if(id1.HasValue)
+                {
+                    await Downloader.AddPlaylistAsync(id1.Value,resolution);
+                }
+            }                        
+            await ctx.SendTextAsync(
+                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }    
+   
     }
     public class TYTDServer 
     {

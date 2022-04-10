@@ -14,6 +14,7 @@ namespace Tesses.YouTubeDownloader
 {
     public abstract partial class TYTDStorage : TYTDBase, IWritable, IDownloader
     {
+        private static readonly HttpClient _default = new HttpClient();
         public abstract Task<Stream> CreateAsync(string path);
 
         public abstract void CreateDirectory(string path);
@@ -28,7 +29,7 @@ namespace Tesses.YouTubeDownloader
         }
         public TYTDStorage()
         {
-            HttpClient=new HttpClient();
+            HttpClient=_default;
              YoutubeClient=new YoutubeClient(HttpClient);
             ExtensionContext=null;
         }
@@ -40,6 +41,8 @@ namespace Tesses.YouTubeDownloader
             }
         }
 
+        bool can_download=true;
+        public bool CanDownload {get {return can_download;} set {can_download=value;}}
         
         public abstract void MoveDirectory(string src,string dest);
         public abstract void DeleteFile(string file);
@@ -92,6 +95,7 @@ namespace Tesses.YouTubeDownloader
         }
         public async Task DownloadThumbnails(VideoId id)
         {
+            if(!can_download) return;
             string Id=id.Value;
             string[] res=new string[] {"default.jpg","sddefault.jpg","mqdefault.jpg","hqdefault.jpg","maxresdefault.jpg"};
             CreateDirectoryIfNotExist($"Thumbnails/{Id}");
@@ -109,14 +113,18 @@ namespace Tesses.YouTubeDownloader
                 }
             }
         }
-        public void StartLoop(CancellationToken token = default(CancellationToken))
+        public void CreateDirectories()
         {
-            CreateDirectoryIfNotExist("VideoOnly");
+             CreateDirectoryIfNotExist("VideoOnly");
             CreateDirectoryIfNotExist("AudioOnly");
             CreateDirectoryIfNotExist("Muxed");
             CreateDirectoryIfNotExist("PreMuxed");
             CreateDirectoryIfNotExist("Info");
             CreateDirectoryIfNotExist("Thumbnails");
+        }
+        public void StartLoop(CancellationToken token = default(CancellationToken))
+        {
+           CreateDirectories();
             Thread thread0=new Thread(()=>{
                  DownloadLoop(token).Wait();
             });
