@@ -86,7 +86,7 @@ namespace Tesses.YouTubeDownloader
             Id=video.Id;
             Title = video.Title;
             AuthorChannelId = video.Author.ChannelId;
-            AuthorTitle = video.Author.Title;
+            AuthorTitle = video.Author.ChannelTitle;
             Description = video.Description;
             Keywords=video.Keywords.ToArray();
             Likes=video.Engagement.LikeCount;
@@ -259,7 +259,7 @@ namespace Tesses.YouTubeDownloader
         {
             Title = playlist.Title;
             AuthorChannelId = playlist.Author.ChannelId;
-            AuthorTitle=playlist.Author.Title;
+            AuthorTitle=playlist.Author.ChannelTitle;
             Description =playlist.Description;
             Id=playlist.Id;
             Videos = videos.Select<IVideo,string>((e)=>{return e.Id;}).ToList();
