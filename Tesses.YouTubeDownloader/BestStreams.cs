@@ -109,7 +109,7 @@ namespace Tesses.YouTubeDownloader
             return streams1;
             }catch(YoutubeExplodeException ex)
             {
-                _=ex;
+                await storage.GetLogger().WriteAsync(ex);
                 return null;
             }
         } 
