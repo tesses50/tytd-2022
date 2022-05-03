@@ -293,7 +293,7 @@ namespace Tesses.YouTubeDownloader
         
         public static async Task AddItemAsync(this IDownloader downloader,string url,Resolution resolution=Resolution.PreMuxed)
         {
-            Console.WriteLine(url);
+            
              VideoId? vid = VideoId.TryParse(url);
             PlaylistId? pid = PlaylistId.TryParse(url);
             ChannelId? cid = ChannelId.TryParse(url);
