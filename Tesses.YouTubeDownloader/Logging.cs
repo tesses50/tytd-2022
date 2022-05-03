@@ -72,6 +72,8 @@ namespace Tesses.YouTubeDownloader
         }
         internal Logger(TYTDStorage storage)
         {
+            storage.CreateDirectoryIfNotExist("config");
+            storage.CreateDirectoryIfNotExist("config/log");
             Properties = GetProperties(storage);
             _storage=storage;
             
