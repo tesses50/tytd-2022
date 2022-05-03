@@ -36,8 +36,9 @@ namespace Tesses.YouTubeDownloader
         List<IMediaContext> Temporary =new List<IMediaContext>();
         private async Task QueueLoop(CancellationToken token)
         {
+           
             while(!token.IsCancellationRequested)
-            {
+            { try{
                 IMediaContext context;
                 lock(Temporary)
                 {
@@ -53,8 +54,14 @@ namespace Tesses.YouTubeDownloader
                 if(context != null)
                 {
                     await context.FillQueue(this,QueueList);                   
+                } 
+                 } catch(Exception ex)
+                {
+                    //did this so app can keep running
+                    await GetLogger().WriteAsync(ex);
                 }
             }
+          
         }
     }
 }

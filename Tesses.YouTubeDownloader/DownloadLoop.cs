@@ -22,6 +22,7 @@ namespace Tesses.YouTubeDownloader
         {
             while (!token.IsCancellationRequested)
             {
+             try{
                 bool hasAny;
                 var (Video, Resolution) = Dequeue(out hasAny);
                 if (hasAny)
@@ -29,6 +30,10 @@ namespace Tesses.YouTubeDownloader
                     await DownloadVideoAsync(Video, Resolution, token,new Progress<double>(ReportProgress),true);
                 }
 
+             }catch(Exception ex)
+             {
+                 await GetLogger().WriteAsync(ex);
+             }
             }
         }
 
@@ -48,6 +53,7 @@ namespace Tesses.YouTubeDownloader
         }
         private void ReportStartVideo(SavedVideo video, Resolution resolution, long length)
         {
+             GetLogger().WriteAsync(video).Wait();
             Progress.Video = video;
             Progress.Progress = 0;
             Progress.ProgressRaw = 0;
@@ -97,6 +103,7 @@ namespace Tesses.YouTubeDownloader
         
         private async Task DownloadVideoAsync(SavedVideo video, Resolution resolution, CancellationToken token=default(CancellationToken),IProgress<double> progress=null,bool report=true)
         {
+            try{
             switch (resolution)
             {
                 case Resolution.Mux:
@@ -111,6 +118,10 @@ namespace Tesses.YouTubeDownloader
                 case Resolution.VideoOnly:
                     await DownloadVideoOnlyAsync(video,token,progress,report);
                     break;
+            }
+            }catch(Exception ex)
+            {
+                await GetLogger().WriteAsync(ex);
             }
 
         }

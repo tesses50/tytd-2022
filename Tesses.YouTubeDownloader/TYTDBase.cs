@@ -371,11 +371,12 @@ namespace Tesses.YouTubeDownloader
             }
         }
          private static string[] resStr = new string[] {"Muxed","PreMuxed","AudioOnly","VideoOnly"};
-         /// <summary>
-         /// Convert DirectoryName to Resolution
-         /// </summary>
-         /// <param name="folder"></param>
-         /// <returns>Video Resolution</returns>
+       
+        /// <summary>
+        /// Convert DirectoryName to Resolution
+        /// </summary>
+        /// <param name="folder"></param>
+        /// <returns>Video Resolution</returns>
         public static Resolution DirectoryToResolution(string folder)
         {
            int e= Array.IndexOf(resStr,folder);
