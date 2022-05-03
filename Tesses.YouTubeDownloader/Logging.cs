@@ -73,7 +73,7 @@ namespace Tesses.YouTubeDownloader
         internal Logger(TYTDStorage storage)
         {
             storage.CreateDirectoryIfNotExist("config");
-            storage.CreateDirectoryIfNotExist("config/log");
+            storage.CreateDirectoryIfNotExist("config/logs");
             Properties = GetProperties(storage);
             _storage=storage;
             
