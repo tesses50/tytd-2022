@@ -18,19 +18,25 @@ using System.Text;
 
 namespace Tesses.YouTubeDownloader
 {
+    internal class LockObj
+    {
+
+    }
     public partial class TYTDStorage 
     {
-        private Mutex mtx0=new Mutex();
+        internal static LockObj o=new LockObj();
+        
         private Logger _log=null;
         public Logger GetLogger()
         {
-            mtx0.WaitOne();
-            if(_log == null)
-            {
-                _log = new Logger(this);
+            lock(o){   
+                if(_log == null)
+                {
+                    _log = new Logger(this);
+                }
+           
+                return _log;
             }
-            mtx0.ReleaseMutex();
-            return _log;
         }
     }
     public class LoggerProperties
@@ -48,7 +54,7 @@ namespace Tesses.YouTubeDownloader
     }
     public class Logger
     {
-        Mutex mtx=new Mutex();
+        
         private string _filename;
         private TYTDStorage _storage;
         
@@ -94,7 +100,13 @@ namespace Tesses.YouTubeDownloader
             else
                 Console.WriteLine(message);
         }
-        public async Task WriteAsync(string message,bool writeToConsole=false, bool isError=false,bool log=true)
+        public async Task WriteAsync(string message,bool writeToConsole=false,bool isError=false,bool log=true)
+        {
+            await Task.Run(()=>{
+                Write(message,writeToConsole,isError,log);       
+            });
+        }
+        public void Write(string message,bool writeToConsole=false, bool isError=false,bool log=true)
         {
             
             if(writeToConsole) WriteStd(message,isError);
@@ -108,18 +120,24 @@ namespace Tesses.YouTubeDownloader
             msg.AppendLine($"{dat.ToShortDateString()} at {dat.ToShortTimeString()}:");
         }
         msg.AppendLine(message);
-            mtx.WaitOne();
-            using(var strm = await _storage.OpenOrCreateAsync(_filename))
+         lock(TYTDStorage.o){   
+            try{
+            using(var strm =  _storage.OpenOrCreateAsync(_filename).GetAwaiter().GetResult())
             {
                 if(!strm.CanSeek) return;
 
                 strm.Seek(0,SeekOrigin.End);
                 using(var sw = new StreamWriter(strm))
                 {
-                    await sw.WriteLineAsync(msg.ToString());
+                    sw.WriteLine(msg.ToString());
                 }
-            } 
-            mtx.ReleaseMutex();
+            } }
+            catch(Exception ex)
+            {
+                _=ex;
+            }
+            //mtx.ReleaseMutex();
+            }
         }
 
         public async Task WriteAsync(Exception ex)
