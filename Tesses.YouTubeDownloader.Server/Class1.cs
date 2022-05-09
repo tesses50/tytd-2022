@@ -325,6 +325,7 @@ namespace Tesses.YouTubeDownloader.Server
         public ApiV2Server(IDownloader downloader)
         {
                 this.Downloader=downloader;
+                
                 Add("/AddItem",AddItem);
                 Add("/AddChannel",AddChannel);
                 Add("/AddUser",AddUser);
@@ -332,7 +333,94 @@ namespace Tesses.YouTubeDownloader.Server
                 Add("/AddVideo",AddVideo);
                 Add("/Progress",ProgressFunc);
                 Add("/QueueList",QueueList);
+                Add("/subscribe",Subscribe);
+                Add("/resubscribe",Resubscribe);
+                
         }
+        public async Task Resubscribe(ServerContext ctx)
+                {
+            TYTDStorage storage = Downloader as TYTDStorage;
+            if(storage != null)
+            {
+                string id;
+
+                 if(ctx.QueryParams.TryGetFirst("id",out id))
+                 {
+                    
+                     string confstr;
+                     ChannelBellInfo conf=ChannelBellInfo.NotifyAndDownload;
+                    if(ctx.QueryParams.TryGetFirst("conf",out confstr))
+                    {
+                        if(!Enum.TryParse<ChannelBellInfo>(confstr,out conf))
+                        {
+                            conf = ChannelBellInfo.NotifyAndDownload;
+                        }
+                    }
+                    
+                     ChannelId? cid=ChannelId.TryParse(WebUtility.UrlDecode(id));
+
+                     if(cid.HasValue)
+                     {
+                        
+                         var sub=storage.GetSubscription(cid.Value);
+                         if(sub != null)
+                         {
+                             sub.BellInfo = conf;
+                             await storage.SaveSubscription(sub);
+                         }
+                     }
+                 }
+            }
+             await ctx.SendTextAsync(
+                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }
+        public async Task Subscribe(ServerContext ctx)
+        {
+            TYTDStorage storage = Downloader as TYTDStorage;
+            if(storage != null)
+            {
+                string id;
+
+                 if(ctx.QueryParams.TryGetFirst("id",out id))
+                 {
+                     string getinfostr;
+                     bool getinfo=true;
+                     if(ctx.QueryParams.TryGetFirst("getinfo",out getinfostr))
+                     {
+                         if(getinfostr == "false")
+                         {
+                             getinfo=false;
+                         }
+                     }
+                     string confstr;
+                     ChannelBellInfo conf=ChannelBellInfo.NotifyAndDownload;
+                    if(ctx.QueryParams.TryGetFirst("conf",out confstr))
+                    {
+                        if(!Enum.TryParse<ChannelBellInfo>(confstr,out conf))
+                        {
+                            conf = ChannelBellInfo.NotifyAndDownload;
+                        }
+                    }
+                    
+                     ChannelId? cid=ChannelId.TryParse(WebUtility.UrlDecode(id));
+
+                     if(cid.HasValue)
+                     {
+                        
+                         await storage.Subscribe(cid.Value,getinfo,conf);
+                     }else{
+                        UserName? uname=UserName.TryParse(WebUtility.UrlDecode(id));
+                        await storage.Subscribe(uname.Value,conf);
+
+                     }
+                 }
+            }
+             await ctx.SendTextAsync(
+                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }
+       
         public async Task QueueList(ServerContext ctx)
         {
             await ctx.SendJsonAsync(Downloader.GetQueueList());
@@ -362,7 +450,7 @@ namespace Tesses.YouTubeDownloader.Server
                 }
             }                        
             await ctx.SendTextAsync(
-                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
             );
         }    
             public async Task AddItem(ServerContext ctx)
@@ -390,7 +478,7 @@ namespace Tesses.YouTubeDownloader.Server
                 public async Task AddUser(ServerContext ctx)
         {
             string id;
-            if(ctx.QueryParams.TryGetFirst("v",out id))
+            if(ctx.QueryParams.TryGetFirst("id",out id))
             {
                 Resolution resolution=Resolution.PreMuxed;
                 string res;
@@ -415,7 +503,7 @@ namespace Tesses.YouTubeDownloader.Server
                 public async Task AddChannel(ServerContext ctx)
         {
             string id;
-            if(ctx.QueryParams.TryGetFirst("v",out id))
+            if(ctx.QueryParams.TryGetFirst("id",out id))
             {
                 Resolution resolution=Resolution.PreMuxed;
                 string res;
@@ -440,7 +528,7 @@ namespace Tesses.YouTubeDownloader.Server
             public async Task AddPlaylist(ServerContext ctx)
         {
             string id;
-            if(ctx.QueryParams.TryGetFirst("v",out id))
+            if(ctx.QueryParams.TryGetFirst("id",out id))
             {
                 Resolution resolution=Resolution.PreMuxed;
                 string res;

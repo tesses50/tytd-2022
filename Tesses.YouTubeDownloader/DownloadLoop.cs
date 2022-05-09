@@ -27,7 +27,11 @@ namespace Tesses.YouTubeDownloader
                 var (Video, Resolution) = Dequeue(out hasAny);
                 if (hasAny)
                 {
-                    await DownloadVideoAsync(Video, Resolution, token,new Progress<double>(ReportProgress),true);
+                    await DownloadVideoAsync(Video, Resolution, token,new Progress<double>(
+                       async (e)=>{
+                            await ReportProgress(e);
+                        }
+                    ),true);
                 }
 
              }catch(Exception ex)
@@ -38,7 +42,7 @@ namespace Tesses.YouTubeDownloader
         }
 
         public readonly SavedVideoProgress Progress = new SavedVideoProgress();
-        private void ReportProgress(double progress)
+        private async Task ReportProgress(double progress)
         {
             Progress.Progress = (int)(progress * 100);
             Progress.ProgressRaw = progress;
@@ -47,11 +51,19 @@ namespace Tesses.YouTubeDownloader
             {
                 foreach (var ext in ExtensionContext.Extensions)
                 {
-                    ext.VideoProgress(Progress.Video, progress);
+                   await ext.VideoProgress(Progress.Video, progress);
                 }
             }
+
+            VideoProgressEventArgs args=new VideoProgressEventArgs();
+            args.VideoInfo=Progress.Video;
+            args.Progress=progress;
+            
+
+            VideoProgress?.Invoke(this,args); 
+            
         }
-        private void ReportStartVideo(SavedVideo video, Resolution resolution, long length)
+        private async Task ReportStartVideo(SavedVideo video, Resolution resolution, long length)
         {
              GetLogger().WriteAsync(video).Wait();
             Progress.Video = video;
@@ -63,11 +75,17 @@ namespace Tesses.YouTubeDownloader
             {
                 foreach (var item in ExtensionContext.Extensions)
                 {
-                    item.VideoStarted(video, resolution, length);
+                    await item.VideoStarted(video, resolution, length);
                 }
             }
+            VideoStartedEventArgs args=new VideoStartedEventArgs();
+            args.VideoInfo=video;
+            args.Resolution=resolution;
+            args.EstimatedLength=length;
+
+            VideoStarted?.Invoke(this,args);
         }
-        private void ReportEndVideo(SavedVideo video, Resolution resolution)
+        private async Task ReportEndVideo(SavedVideo video, Resolution resolution)
         {
             Progress.Progress = 100;
             Progress.ProgressRaw = 1;
@@ -77,10 +95,15 @@ namespace Tesses.YouTubeDownloader
             {
                 foreach (var item in ExtensionContext.Extensions)
                 {
-                    item.VideoFinished(video, resolution);
+                    await item.VideoFinished(video, resolution);
                 }
             }
+            VideoFinishedEventArgs args=new VideoFinishedEventArgs();
+            args.VideoInfo=video;
+            args.Resolution = resolution;
+            VideoFinished?.Invoke(this,args);
         }
+
         public async Task DownloadNoQueue(SavedVideo info,Resolution resolution=Resolution.Mux,CancellationToken token=default(CancellationToken),IProgress<double> progress=null)
         {
           
@@ -399,7 +422,7 @@ namespace Tesses.YouTubeDownloader
                  return;
              }
              if(report)
-            ReportStartVideo(video,Resolution.Mux,0);
+            await ReportStartVideo(video,Resolution.Mux,0);
              string complete = $"Muxed/{video.Id}.mkv";
              string incomplete = $"Muxed/{video.Id}incomplete.mkv";
               string complete_vidonly = $"VideoOnly/{video.Id}.{streams.VideoOnlyStreamInfo.Container}";
@@ -414,7 +437,7 @@ namespace Tesses.YouTubeDownloader
                     }
             }
             if(report)
-            ReportEndVideo(video,Resolution.Mux);
+            await ReportEndVideo(video,Resolution.Mux);
         }
         private void DeleteIfExists(string path)
         {
@@ -447,7 +470,7 @@ namespace Tesses.YouTubeDownloader
                                 return false;
                             }
                             if(report)
-                            ReportStartVideo(video, Resolution.VideoOnly,streams.VideoOnlyStreamInfo.Size.Bytes);
+                           await ReportStartVideo(video, Resolution.VideoOnly,streams.VideoOnlyStreamInfo.Size.Bytes);
                             long len=await GetLengthAsync(incomplete);
                             
                             using(var dest = await OpenOrCreateAsync(incomplete))
@@ -458,7 +481,7 @@ namespace Tesses.YouTubeDownloader
                             {
                                 RenameFile(incomplete,complete);
                                 if(report)
-                                ReportEndVideo(video, Resolution.VideoOnly);
+                              await  ReportEndVideo(video, Resolution.VideoOnly);
                             }
                         }
                     }
@@ -543,7 +566,7 @@ namespace Tesses.YouTubeDownloader
                                 return false;
                             }
                             if(report)
-                            ReportStartVideo(video, Resolution.AudioOnly,streams.AudioOnlyStreamInfo.Size.Bytes);
+                           await ReportStartVideo(video, Resolution.AudioOnly,streams.AudioOnlyStreamInfo.Size.Bytes);
                             long len=await GetLengthAsync(incomplete);
                             
                             using(var dest = await OpenOrCreateAsync(incomplete))
@@ -554,7 +577,7 @@ namespace Tesses.YouTubeDownloader
                             {
                                 RenameFile(incomplete,complete);
                                 if(report)
-                                ReportEndVideo(video, Resolution.AudioOnly);
+                               await  ReportEndVideo(video, Resolution.AudioOnly);
                             }
                         }
                     }
@@ -591,7 +614,7 @@ namespace Tesses.YouTubeDownloader
                                 return;
                             }
                             if(report)
-                            ReportStartVideo(video,Resolution.PreMuxed,streams.MuxedStreamInfo.Size.Bytes);
+                            await ReportStartVideo(video,Resolution.PreMuxed,streams.MuxedStreamInfo.Size.Bytes);
                             long len=await GetLengthAsync(incomplete);
                             bool ret;
                             using(var dest = await OpenOrCreateAsync(incomplete))
@@ -603,7 +626,7 @@ namespace Tesses.YouTubeDownloader
                             {
                                 RenameFile(incomplete,complete);
                                 if(report)
-                                ReportEndVideo(video, Resolution.PreMuxed); 
+                                await ReportEndVideo(video, Resolution.PreMuxed); 
                             }
                         }
                     }

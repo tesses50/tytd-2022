@@ -110,6 +110,7 @@ namespace Tesses.YouTubeDownloader
         }
         public async Task FillQueue(TYTDStorage storage, List<(SavedVideo video, Resolution resolution)> Queue)
         {
+    
             string path=$"Playlist/{Id}.json"; 
             List<IVideo> videos=new List<IVideo>();
             await foreach(var vid in storage.YoutubeClient.Playlists.GetVideosAsync(Id))
@@ -117,6 +118,13 @@ namespace Tesses.YouTubeDownloader
                 videos.Add(vid);
             }
             var p=new SavedPlaylist(await storage.YoutubeClient.Playlists.GetAsync(Id),videos);
+            if(storage.GetLoggerProperties().AlwaysDownloadChannel)
+            {
+                var c=ChannelId.Parse(p.AuthorChannelId);
+                ChannelMediaContext cmc=new ChannelMediaContext(c,Resolution.NoDownload);
+                await cmc.GetChannel(storage);
+                
+            }
             await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(p));
             if(Resolution == Resolution.NoDownload) return;
             foreach(var item in videos)
@@ -146,6 +154,8 @@ namespace Tesses.YouTubeDownloader
             {
                 try{
                     video = new SavedVideo(await storage.YoutubeClient.Videos.GetAsync(Id));
+                    
+                    storage.SendBeforeSaveInfo(video);
                     await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(video));
                     await video.DownloadThumbnails(storage);
                 }catch(Exception ex)
@@ -156,6 +166,13 @@ namespace Tesses.YouTubeDownloader
                 
             }else{
                 video = JsonConvert.DeserializeObject<SavedVideo>(await storage.ReadAllTextAsync(path));
+            }
+            if(storage.GetLoggerProperties().AlwaysDownloadChannel)
+            {
+                var c=ChannelId.Parse(video.AuthorChannelId);
+                ChannelMediaContext cmc=new ChannelMediaContext(c,Resolution.NoDownload);
+                await cmc.GetChannel(storage);
+                
             }
             if(resolution == Resolution.NoDownload) return;
             lock(queue)

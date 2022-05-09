@@ -32,13 +32,26 @@ namespace Tesses.YouTubeDownloader
         {
             return Progress;
         }
+        List<Subscription> Subscriptions {get;set;}
         List<(SavedVideo Video, Resolution Resolution)> QueueList = new List<(SavedVideo Video, Resolution Resolution)>();
         List<IMediaContext> Temporary =new List<IMediaContext>();
         private async Task QueueLoop(CancellationToken token)
         {
-           
+
+           try{
+               
+               Subscriptions=new List<Subscription>();
+               await foreach(var sub in GetSubscriptionsAsync())
+               {
+                   Subscriptions.Add(sub);
+               }
+           }catch(Exception ex)
+           {
+               await GetLogger().WriteAsync(ex);
+           }
             while(!token.IsCancellationRequested)
             { try{
+               
                 IMediaContext context;
                 lock(Temporary)
                 {

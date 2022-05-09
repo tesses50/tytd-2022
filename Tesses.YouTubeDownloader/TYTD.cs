@@ -115,6 +115,7 @@ namespace Tesses.YouTubeDownloader
         }
         public void CreateDirectories()
         {
+            CreateDirectoryIfNotExist("Subscriptions");
              CreateDirectoryIfNotExist("VideoOnly");
             CreateDirectoryIfNotExist("AudioOnly");
             CreateDirectoryIfNotExist("Muxed");

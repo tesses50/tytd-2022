@@ -231,14 +231,14 @@ namespace Tesses.YouTubeDownloader
         {
             StringBuilder b=new StringBuilder();
             b.AppendLine($"Title: {Title}");
-            b.AppendLine($"💁 {AuthorTitle}");
+            b.AppendLine($"AuthorTitle: {AuthorTitle}");
             DateTime date=UploadDate;
             
-                 b.AppendLine($"📅 {date.ToShortDateString()}");
+                 b.AppendLine($"Upload Date: {date.ToShortDateString()}");
             
-            b.AppendLine($"👍 {Likes}, 👎 {Dislikes}, 👁 {Views}");
-            b.AppendLine($"🕒 {Duration.ToString()}");
-            b.AppendLine($"🔑 {string.Join(", ",Keywords)}");
+            b.AppendLine($"Likes: {Likes}, Dislikes: {Dislikes}, Views: {Views}");
+            b.AppendLine($"Duration: {Duration.ToString()}");
+            b.AppendLine($"Tags: {string.Join(", ",Keywords)}");
             b.AppendLine("Description:");
             b.AppendLine(Description);
             return b.ToString();
