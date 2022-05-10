@@ -208,6 +208,10 @@ namespace Tesses.YouTubeDownloader
             {
                if(item2.Name == "yt:videoId")
                {
+                   if(BellInfo.HasFlag(ChannelBellInfo.GetInfo))
+                   {
+                       await Base.AddVideoAsync(item2.InnerText,Resolution.NoDownload);
+                   }
                    if(BellInfo.HasFlag(ChannelBellInfo.Download))
                    {
                        await Base.AddVideoAsync(item2.InnerText);
