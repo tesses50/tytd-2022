@@ -20,5 +20,10 @@ namespace Tesses.YouTubeDownloader
 
         IReadOnlyList<(SavedVideo Video,Resolution Resolution)> GetQueueList();
         SavedVideoProgress GetProgress();
+        IAsyncEnumerable<Subscription> GetSubscriptionsAsync();
+        Task UnsubscribeAsync(ChannelId id);
+        Task SubscribeAsync(ChannelId id,bool downloadChannelInfo=false,ChannelBellInfo bellInfo = ChannelBellInfo.NotifyAndDownload);
+        Task SubscribeAsync(UserName name,ChannelBellInfo info=ChannelBellInfo.NotifyAndDownload);
+        Task ResubscribeAsync(ChannelId id,ChannelBellInfo info=ChannelBellInfo.NotifyAndDownload);
     }
 }

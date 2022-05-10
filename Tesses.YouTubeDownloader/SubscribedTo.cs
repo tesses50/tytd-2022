@@ -66,7 +66,22 @@ namespace Tesses.YouTubeDownloader
             
         }
 
-    
+       
+        public async Task UnsubscribeAsync(ChannelId id)
+        {
+            await Task.Run(()=>{Unsubscribe(id);});
+        }
+  
+        public async Task ResubscribeAsync(ChannelId id,ChannelBellInfo info=ChannelBellInfo.NotifyAndDownload)
+        {
+            var sub=GetSubscription(id);
+                         if(sub != null)
+                         {
+                             sub.BellInfo = info;
+                             await SaveSubscription(sub);
+                         }
+        }
+
         public DateTime LastSubscriptionTime = DateTime.MinValue;
         public  async Task HandleSubscriptions()
         {
@@ -99,7 +114,7 @@ namespace Tesses.YouTubeDownloader
         /// <summary>
         /// Subscribe to creator
         /// </summary>
-        public async Task Subscribe(ChannelId id, bool downloadChannelInfo=false,ChannelBellInfo bellInfo = ChannelBellInfo.NotifyAndDownload)
+        public async Task SubscribeAsync(ChannelId id, bool downloadChannelInfo=false,ChannelBellInfo bellInfo = ChannelBellInfo.NotifyAndDownload)
         {
             if(downloadChannelInfo)
             {
@@ -117,11 +132,15 @@ namespace Tesses.YouTubeDownloader
         {
             await WriteAllTextAsync($"Subscriptions/{sub.Id}",JsonConvert.SerializeObject(sub));
         }
-        public async Task Subscribe(UserName name,ChannelBellInfo bellInfo=ChannelBellInfo.NotifyAndDownload)
+        public async Task SubscribeAsync(UserName name,ChannelBellInfo bellInfo=ChannelBellInfo.NotifyAndDownload)
         {
             ChannelMediaContext context=new ChannelMediaContext(name,Resolution.NoDownload);
             var c=await context.GetChannel(this);
-            await Subscribe(ChannelId.Parse(c.Id),false,bellInfo);
+            await SubscribeAsync(ChannelId.Parse(c.Id),false,bellInfo);
+        }
+        public IReadOnlyList<Subscription> GetLoadedSubscriptions()
+        {
+            return Subscriptions;
         }
         public void Unsubscribe(ChannelId id)
         {

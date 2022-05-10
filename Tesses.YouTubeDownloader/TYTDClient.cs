@@ -11,6 +11,7 @@ using System.IO;
 using YoutubeExplode.Channels;
 using YoutubeExplode.Playlists;
 using System.Net.Http;
+using System.Net;
 
 namespace Tesses.YouTubeDownloader
 {
@@ -111,7 +112,67 @@ namespace Tesses.YouTubeDownloader
                 }
             }
         }
-
+        public async IAsyncEnumerable<Subscription> GetSubscriptionsAsync()
+        {
+            string v="[]";
+            try{
+                   v=await client.GetStringAsync("/api/v2/subscriptions");
+               }catch(Exception ex)
+            {
+                _=ex;
+            }    
+            foreach(var item in JsonConvert.DeserializeObject<List<Subscription>>(v))
+            {
+                      yield return await Task.FromResult(item);
+            }
+            
+           
+        }
+        public async Task UnsubscribeAsync(ChannelId id)
+        {
+            try{
+                  string v=await client.GetStringAsync($"/api/v2/unsubscribe?id={id.Value}");
+            
+            }catch(Exception ex)
+            {
+                _=ex;
+            }
+        }
+        public async Task SubscribeAsync(ChannelId id,bool downloadChannelInfo=false,ChannelBellInfo bellInfo = ChannelBellInfo.NotifyAndDownload)
+        {
+              try{
+                  string dlcid=downloadChannelInfo ? "true" : "false";
+                  string v=await client.GetStringAsync($"/api/v2/subscribe?id={id.Value}&conf={bellInfo.ToString()}&getinfo={dlcid}");
+            
+            }catch(Exception ex)
+            {
+                _=ex;
+            }
+        }
+        public async Task SubscribeAsync(UserName name,ChannelBellInfo info=ChannelBellInfo.NotifyAndDownload)
+        {
+             try{
+                
+                  
+                  string v=await client.GetStringAsync($"/api/v2/subscribe?id={ WebUtility.UrlEncode(name.Value)}&conf={info.ToString()}");
+            
+            }catch(Exception ex)
+            {
+                _=ex;
+            }
+        }
+        public async Task ResubscribeAsync(ChannelId id,ChannelBellInfo info=ChannelBellInfo.NotifyAndDownload)
+        {
+             try{
+                
+                  
+                  string v=await client.GetStringAsync($"/api/v2/resubscribe?id={id.Value}&conf={info.ToString()}");
+            
+            }catch(Exception ex)
+            {
+                _=ex;
+            }
+        }
         public async override IAsyncEnumerable<string> EnumerateFilesAsync(string path)
         {
             List<string> items=null;
@@ -208,6 +269,6 @@ namespace Tesses.YouTubeDownloader
            return Stream.Null;
         }
 
-     
+       
     }
 }
