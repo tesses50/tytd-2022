@@ -3,6 +3,8 @@
 [Server Endpoints](docs/Server.md)  
 <br>
 [Classes and Enums](docs/JsonAndEnum.md)  
+<br>
+Please put your issues on my [GitHub](https://github.com/tesses50/tytd-2022)
 
 # What this is known to work on
   - Modern Linux/Windows/Mac (or any thing that can run .NET Standard 2.0+)
