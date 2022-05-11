@@ -14,6 +14,6 @@ See [this](StreamInfo.md) if you havent already
 | HasAudio | Stream Has Audio | Boolean |  
 | Size     | FileSize in bytes | Int64 |  
 | Container | This is what {Container} means ex "mp4" | String |  
-| VideoCodec | The video codec of stream ex "avc1.64001F" |  
+| VideoCodec | The video codec of stream ex "avc1.64001F" |  String | 
 | Bitrate | Stream's bitrate | Int64 |  
 | Url | Direct YouTube Url (usually googlevideo.com) | String |  
