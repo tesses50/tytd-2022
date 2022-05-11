@@ -130,7 +130,7 @@ namespace Tesses.YouTubeDownloader
         }
         public async Task SaveSubscription(Subscription sub)
         {
-            await WriteAllTextAsync($"Subscriptions/{sub.Id}",JsonConvert.SerializeObject(sub));
+            await WriteAllTextAsync($"Subscriptions/{sub.Id}.json",JsonConvert.SerializeObject(sub));
         }
         public async Task SubscribeAsync(UserName name,ChannelBellInfo bellInfo=ChannelBellInfo.NotifyAndDownload)
         {

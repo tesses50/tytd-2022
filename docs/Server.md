@@ -18,3 +18,8 @@ Get Requests
 | http://localhost:3252/api/v2/resubscribe?id={ChannelId}&conf=Download | Change Bell for YouTuber, See [Bell](Bell.md) for conf queryparm |  
 | http://localhost:3252/api/v2/unsubscribe?id={ChannelId} | Unsubscribe from YouTuber |  
 | http://localhost:3252/api/v2/subscriptions | Get Subscriptions, Is a json array of [Subscription](Subscription.md) |  
+| http://localhost:3252/api/Storage/File/{File_Path} | Get File from TYTDStorage |  
+| http://localhost:3252/api/Storage/FileExists/{File_Path} | Does file exist, returns "true" or "false" as response (Not Json just that text) |  
+| http://localhost:3252/api/Storage/DirectoryExists/{Directory_Path} | Does directory exist, returns "true" or "false" as response (Not Json just that text) |  
+| http://localhost:3252/api/Storage/GetFiles/{File_Path} | Get list of files json array of filenames, not full path |  
+| http://localhost:3252/api/Storage/GetDirectories/{Directory_Path} | Get list of directorys json array of directory names, not full path |  

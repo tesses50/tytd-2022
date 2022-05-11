@@ -115,6 +115,8 @@ namespace Tesses.YouTubeDownloader
         }
         public void CreateDirectories()
         {
+            CreateDirectoryIfNotExist("Channel");
+            CreateDirectoryIfNotExist("Playlist");
             CreateDirectoryIfNotExist("Subscriptions");
              CreateDirectoryIfNotExist("VideoOnly");
             CreateDirectoryIfNotExist("AudioOnly");
@@ -122,6 +124,8 @@ namespace Tesses.YouTubeDownloader
             CreateDirectoryIfNotExist("PreMuxed");
             CreateDirectoryIfNotExist("Info");
             CreateDirectoryIfNotExist("Thumbnails");
+            CreateDirectoryIfNotExist("config");
+            CreateDirectoryIfNotExist("config/logs");
         }
         public void StartLoop(CancellationToken token = default(CancellationToken))
         {

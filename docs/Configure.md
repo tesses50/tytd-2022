@@ -1,5 +1,5 @@
 # Configuration
-This is Json Object (With these Key/Value Pairs)
+This is Json Object (With these Key/Value Pairs)<br>
 File path is config/tytdprop.json
 | Name    | Description       |  Type |  
 | ------- | ----------------- | ----- |  

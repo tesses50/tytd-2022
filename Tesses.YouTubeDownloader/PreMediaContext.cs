@@ -30,17 +30,17 @@ namespace Tesses.YouTubeDownloader
         }
         Resolution Resolution;
         UserName name1;
-        ChannelId Id;
+        ChannelId? Id; //made me nullable
 
         public async Task<SavedChannel> GetChannel(TYTDStorage storage)
         {
             SavedChannel channel;
-            if(Id !=null)
+            if(Id.HasValue) //dont check for if(Id != null) hince I was looking for several minutes for the bug
             {
-              string path=$"Channel/{Id}.json";
+              string path=$"Channel/{Id.Value}.json";
               if(await storage.Continue(path))
               {
-                  channel=await DownloadThumbnails(storage,await storage.YoutubeClient.Channels.GetAsync(Id));
+                  channel=await DownloadThumbnails(storage,await storage.YoutubeClient.Channels.GetAsync(Id.Value));
                   //channel=new SavedChannel(i);
                   await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(channel));
                   return channel;
@@ -49,8 +49,9 @@ namespace Tesses.YouTubeDownloader
                   return j;
               }
             }else{
-                channel=await DownloadThumbnails(storage, await storage.YoutubeClient.Channels.GetByUserAsync(name1));
-                string path=$"Channel/{Id}.json";
+                 var c=await storage.YoutubeClient.Channels.GetByUserAsync(name1);
+                channel=await DownloadThumbnails(storage,c);
+                string path=$"Channel/{c.Id.Value}.json";
                 if(await storage.Continue(path))
                 {
                      await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(channel));
