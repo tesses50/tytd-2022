@@ -103,11 +103,12 @@ namespace Tesses.YouTubeDownloader
             
             await foreach(var item in EnumerateFilesAsync("Subscriptions"))
             {
-                
+                if(Path.GetExtension(item).Equals(".json"))
+                {
                     var sub=JsonConvert.DeserializeObject<Subscription>(await ReadAllTextAsync(item));
                     sub.Base=this;
                     yield return await Task.FromResult(sub);
-                
+                }
             }
         }
         /// <summary>
