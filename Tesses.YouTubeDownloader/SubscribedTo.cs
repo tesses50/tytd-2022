@@ -105,7 +105,7 @@ namespace Tesses.YouTubeDownloader
             {
                 if(Path.GetExtension(item).Equals(".json"))
                 {
-                    var sub=JsonConvert.DeserializeObject<Subscription>(await ReadAllTextAsync(item));
+                    var sub=JsonConvert.DeserializeObject<Subscription>(await ReadAllTextAsync($"Subscriptions/{item}"));
                     sub.Base=this;
                     yield return await Task.FromResult(sub);
                 }
