@@ -8,4 +8,4 @@ This is an Enum
 | GetInfo | 1 | Get info about video only (different from getinfo arg on requests (that is for getting channel info)) |  
 | Notify | 3 | Notify (Calls Bell event in TYTDStorage abstract class) | 
 | Download | 5 | Download Video |
-| NotifyAndDownload | 6  |  Does the same as both Notify And Download|
+| NotifyAndDownload | 7  |  Does the same as both Notify And Download|
