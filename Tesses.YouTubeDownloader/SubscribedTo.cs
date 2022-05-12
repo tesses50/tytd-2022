@@ -161,12 +161,12 @@ namespace Tesses.YouTubeDownloader
     [Flags]
     public enum ChannelBellInfo
     {
-        DoNothing=0,
-        GetInfo=1,
+        DoNothing=0b000,
+        GetInfo=0b001,
         
-        Notify=2,
+        Notify=0b010 | GetInfo,
 
-        Download=3,
+        Download=0b100 | GetInfo,
 
         NotifyAndDownload=Notify|Download
     }
@@ -210,12 +210,14 @@ namespace Tesses.YouTubeDownloader
                {
                    if(BellInfo.HasFlag(ChannelBellInfo.GetInfo))
                    {
-                       await Base.AddVideoAsync(item2.InnerText,Resolution.NoDownload);
+                       if(BellInfo.HasFlag(ChannelBellInfo.Download))
+                       {
+                            await Base.AddVideoAsync(item2.InnerText);
+                       }else{
+                            await Base.AddVideoAsync(item2.InnerText,Resolution.NoDownload);
+                       }
                    }
-                   if(BellInfo.HasFlag(ChannelBellInfo.Download))
-                   {
-                       await Base.AddVideoAsync(item2.InnerText);
-                   }
+                   
 
                    Id=item2.InnerText;
                }
