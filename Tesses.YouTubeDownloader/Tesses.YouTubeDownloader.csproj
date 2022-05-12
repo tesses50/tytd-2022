@@ -7,9 +7,9 @@
       <PackageId>Tesses.YouTubeDownloader</PackageId>
     <Author>Mike Nolan</Author>
     <Company>Tesses</Company>
-     <Version>1.0.3.4</Version>
-    <AssemblyVersion>1.0.3.4</AssemblyVersion>
-    <FileVersion>1.0.3.4</FileVersion>
+     <Version>1.0.3.5</Version>
+    <AssemblyVersion>1.0.3.5</AssemblyVersion>
+    <FileVersion>1.0.3.5</FileVersion>
     <Description>A YouTube Downloader</Description>
     <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
      <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
