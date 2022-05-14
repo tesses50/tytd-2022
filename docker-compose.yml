@@ -1,0 +1,11 @@
+version: '2'
+services:
+  tytd:
+      build: Dockerfile
+      image: tytd
+      ports:
+        - 3252:3252
+      volumes:
+        - tytd-data:/data
+volumes:
+  tytd-data:
