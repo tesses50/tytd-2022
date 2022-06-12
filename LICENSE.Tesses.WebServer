@@ -22,3 +22,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Licensing for JSON.NET dependency also applies: https://www.newtonsoft.com/json
 Licensing for SimpleHttp also applies: https://github.com/dajuric/simple-http
+
+I Used same license hince I used some of dajurics code in Tesses.WebServer
