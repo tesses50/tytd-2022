@@ -35,7 +35,7 @@ namespace Tesses.YouTubeDownloader.ExtensionLoader
         List<IExtension> extensions = new List<IExtension>();
         public List<IExtension> Extensions => extensions;
         
-        TYTDStorage Storage;
+        IStorage Storage;
         MountableServer Server;
         string dir;
         /// <summary>
@@ -43,7 +43,7 @@ namespace Tesses.YouTubeDownloader.ExtensionLoader
         /// </summary>
         /// <param name="storage">Storage for TYTD</param>
         /// <param name="lookInDir">where to look for extensions</param>
-        public Loader(TYTDStorage storage,string lookInDir="config/apidll")
+        public Loader(IStorage storage,string lookInDir="config/apidll")
         {
             Directory.CreateDirectory(lookInDir);
             dir=lookInDir;
@@ -122,7 +122,7 @@ namespace Tesses.YouTubeDownloader.ExtensionLoader
         /// Use relative paths please
         /// </summary>
         /// <value></value>
-        public TYTDStorage Storage {get; internal set;}
+        public IStorage Storage {get; internal set;}
         /// <summary>
         /// Get extension storage dir use "Storage" to actually access files
         /// The path config/apistore/{Name} is created if it doesnt exist

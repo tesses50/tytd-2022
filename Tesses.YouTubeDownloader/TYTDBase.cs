@@ -74,9 +74,9 @@ namespace Tesses.YouTubeDownloader
             baseStrm.Close();
         }
     }
-      public abstract class TYTDBase
+      public abstract class TYTDBase : ITYTDBase
     {
-        
+       
 
         public async IAsyncEnumerable<(VideoId Id,Resolution Resolution)> GetPersonalPlaylistContentsAsync(string playlist)
         {
@@ -214,6 +214,14 @@ namespace Tesses.YouTubeDownloader
                 }
             }
         }
+        public async IAsyncEnumerable<VideoId> GetYouTubeExplodeVideoIdsAsync()
+        {
+            await foreach(var item in GetVideoIdsAsync())
+            {
+                VideoId? id= VideoId.TryParse(item);
+                if(id.HasValue) yield return id.Value;
+            }
+        }
         public async Task<SavedChannel> GetChannelInfoAsync(ChannelId id)
         {
             return JsonConvert.DeserializeObject<SavedChannel>(await ReadAllTextAsync($"Channel/{id}.json"));
@@ -230,12 +238,23 @@ namespace Tesses.YouTubeDownloader
             }
         }
 
+        public bool PlaylistInfoExists(PlaylistId id)
+        {
+            return FileExists($"Playlist/{id}.json");
+        }
+        public bool VideoInfoExists(VideoId id)
+        {
+            return FileExists($"Info/{id}.json");
+        }
+        public bool ChannelInfoExists(ChannelId id)
+        {
+            return FileExists($"Channel/{id}.json");
+        }
         public async Task<SavedPlaylist> GetPlaylistInfoAsync(PlaylistId id)
         {
             return JsonConvert.DeserializeObject<SavedPlaylist>(await ReadAllTextAsync($"Playlist/{id}.json"));
         }
-
-        
+ 
         public async Task<string> ReadAllTextAsync(string file)
         {
             using(var s = await OpenReadAsync(file))
@@ -290,7 +309,15 @@ namespace Tesses.YouTubeDownloader
         /// </summary>
         /// <param name="url">Video, Playlist, Channel Or UserName Url Or Id</param>
         /// <param name="resolution">Video Resolution</param>
-        
+         public static async Task<List<(VideoId Id,Resolution Resolution)>> ToPersonalPlaylist(this IAsyncEnumerable<VideoId> list,Resolution res)
+        {
+            List<(VideoId Id,Resolution Resolution)> items=new List<(VideoId Id, Resolution Resolution)>();
+            await foreach(var item in list)
+            {
+                items.Add((item,res));
+            }
+            return items;
+        }
         public static async Task AddItemAsync(this IDownloader downloader,string url,Resolution resolution=Resolution.PreMuxed)
         {
             
@@ -388,10 +415,19 @@ namespace Tesses.YouTubeDownloader
         {
             return resStr[(int)res];
         }
-        public static async Task<bool> CopyVideoToFileAsync(VideoId id,TYTDBase src,Stream destFile,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken))
+        public static async Task<bool> CopyVideoToFileAsync(VideoId id,ITYTDBase src,Stream destFile,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken))
         {
-              string resDir = ResolutionToDirectory(res);
-             string path=$"{resDir}/{id.Value}.mp4";
+             string infoFile=$"Info/{id.Value}.json";
+             string path="";
+             if(await src.FileExistsAsync(infoFile)){
+              string f=await src.ReadAllTextAsync(infoFile);
+                SavedVideo video = JsonConvert.DeserializeObject<SavedVideo>(f);
+                path=await BestStreams.GetPathResolution(src,video,res);
+             }else{
+                 return false;
+             }
+             if(string.IsNullOrWhiteSpace(path)) return false;
+
                 bool ret=false;
                 double len=await src.GetLengthAsync(path);
                 if(await src.FileExistsAsync(path))
@@ -410,7 +446,7 @@ namespace Tesses.YouTubeDownloader
                 }
                 return ret;
         }
-        public static async Task CopyVideoToFileAsync(VideoId id,TYTDBase src,string dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken))
+        public static async Task CopyVideoToFileAsync(VideoId id,ITYTDBase src,string dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken))
         {
             bool delete=false;
             using(var f = File.Create(dest))
@@ -457,20 +493,238 @@ namespace Tesses.YouTubeDownloader
 
             return true;
         }
-
-        public static async Task CopyVideoAsync(VideoId id,TYTDBase src,TYTDStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken))
+        public static async Task CopyThumbnailsAsync(string id,ITYTDBase src,IStorage dest,IProgress<double> progress=null,CancellationToken token=default(CancellationToken))
         {
-               string resDir = ResolutionToDirectory(res);
-        
-             string path=$"{resDir}/{id.Value}.mp4";
-            string infoFile = $"Info/{id.Value}.json";
-           
             
-            if(await src.FileExistsAsync(infoFile))
+            if(!src.DirectoryExists("Thumbnails") || !src.DirectoryExists($"Thumbnails/{id}")) return;
+            await dest.CopyDirectoryFrom(src,$"Thumbnails/{id}",$"Thumbnails/{id}",progress,token);
+        }
+
+        public static async Task CopyDirectoryFrom(this IStorage _dest,ITYTDBase _src,string src,string dest,IProgress<double> progress,CancellationToken token=default(CancellationToken))
+        {
+
+            List<string> dirs=new List<string>();
+
+            await foreach(var dir in _src.EnumerateDirectoriesAsync(src))
             {
-                if(!await dest.FileExistsAsync(infoFile))
+                dirs.Add(dir);
+                _dest.CreateDirectoryIfNotExist($"{dest.TrimEnd('/')}/{dir.TrimStart('/')}");
+            }
+            List<string> files=new List<string>();
+            await foreach(var file in _src.EnumerateFilesAsync(src))
+            {
+                files.Add(file);
+            }
+            int total = dirs.Count + files.Count;
+            int i=0;
+            double segLen = 1.0 / total;
+            foreach(var item in dirs)
+            {
+                 if(token.IsCancellationRequested) return;
+                await CopyDirectoryFrom(_dest,_src,$"{src.TrimEnd('/')}/{item.TrimStart('/')}",$"{dest.TrimEnd('/')}/{item.TrimStart('/')}",new Progress<double>(e=>{
+                    double percent = e / total;
+                    percent += segLen * i;
+                    if(percent >= 1) percent=1;
+                    if(percent <= 0) percent= 0;
+                    progress?.Report(percent);
+                }),token);
+                i++;
+            }
+             if(token.IsCancellationRequested) return;
+            foreach(var item in files)
+            {
+                 if(token.IsCancellationRequested) return;
+                 await CopyFileFrom(_dest,_src,$"{src.TrimEnd('/')}/{item.TrimStart('/')}",$"{dest.TrimEnd('/')}/{item.TrimStart('/')}",new Progress<double>(e=>{
+                    double percent = e / total;
+                    percent += segLen * i;
+                    if(percent >= 1) percent=1;
+                    if(percent <= 0) percent= 0;
+                    progress?.Report(percent);
+                }),token);
+                i++;
+            }
+        }
+        public static async Task CopyFileFrom(this IStorage _dest,ITYTDBase _src,string src,string dest,IProgress<double> progress=null,CancellationToken token=default(CancellationToken))
+        {
+            double len=await _src.GetLengthAsync(src);
+            using(var srcFile = await _src.OpenReadAsync(src))
                 {
-                    string f=await src.ReadAllTextAsync(infoFile);
+                    bool deleteFile=false;
+                    using(var destFile = await _dest.CreateAsync(dest))
+                    {
+                       deleteFile=!await CopyStream(srcFile,destFile,new Progress<long>((e)=>{
+                            if(progress !=null)
+                            {
+                                progress.Report(e/len);
+                            }
+                        }),token);
+                    }
+                    //dest.DeleteFile(path);
+                }
+        }
+
+        
+        public static async Task CopyVideoAsync(VideoId id,ITYTDBase src,IStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken))
+        {
+            await CopyVideoAsync(id,src,dest,res,progress,token,true);
+        }
+        public static async Task CopyChannelContentsAsync(ChannelId id,ITYTDBase src,IStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken),bool copyThumbnails=true)
+        {
+            List<(VideoId Id, Resolution Resolution)> items=new List<(VideoId Id, Resolution Resolution)>();
+            await foreach(var v in src.GetVideosAsync())
+            {
+                if(v.AuthorChannelId == id.Value)
+                {
+                    VideoId? id2=VideoId.TryParse(v.Id);
+                    if(id2.HasValue)
+                    {
+                        items.Add((id2.Value,res));
+                    }
+                }
+            }
+            await CopyPersonalPlaylistContentsAsync(items,src,dest,progress,token,copyThumbnails);
+        }
+        public static async Task CopyChannelAsync(ChannelId id,ITYTDBase src,IStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken),bool copyThumbnails=true,bool copyContents=false)
+        {
+            if(!src.ChannelInfoExists(id)) return;
+            var channel = await src.GetChannelInfoAsync(id);
+            await dest.WriteChannelInfoAsync(channel);
+            if(copyThumbnails)
+                await CopyThumbnailsAsync(id,src,dest,progress,default(CancellationToken));
+
+            if(copyContents)
+                await CopyChannelContentsAsync(id,src,dest,res,progress,token,copyThumbnails);
+        }
+        public static async Task CopyEverythingAsync(ITYTDBase src,IStorage dest,Resolution res,IProgress<double> progress=null,CancellationToken token=default(CancellationToken),bool copyThumbnails=true)
+        {
+            await CopyAllPlaylistsAsync(src,dest,res,null,token,copyThumbnails,false);
+            if(token.IsCancellationRequested) return;
+            await CopyAllChannelsAsync(src,dest,res,null,token,true);
+            if(token.IsCancellationRequested) return;
+            await CopyAllVideosAsync(src,dest,res,progress,token,copyThumbnails);
+        }
+        public static async Task CopyEverythingAsync(ITYTDBase src,IStorage dest,IProgress<double> progress=null,CancellationToken token=default(CancellationToken),bool copyThumbnails=true)
+        {
+            await CopyEverythingAsync(src,dest,Resolution.Mux,new Progress<double>(e=>{
+                double percent=e / 4;
+                progress?.Report(percent);
+            }));
+             await CopyEverythingAsync(src,dest,Resolution.PreMuxed,new Progress<double>(e=>{
+                double percent=e / 4;
+                percent+=0.25;
+                progress?.Report(percent);
+            }));
+             await CopyEverythingAsync(src,dest,Resolution.AudioOnly,new Progress<double>(e=>{
+                double percent=e / 4;
+                percent+=0.50;
+                progress?.Report(percent);
+            }));
+             await CopyEverythingAsync(src,dest,Resolution.VideoOnly,new Progress<double>(e=>{
+                double percent=e / 4;
+                percent+=0.75;
+                progress?.Report(percent);
+            }));
+        }
+        public static async Task CopyAllVideosAsync(ITYTDBase src,IStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken),bool copyThumbnails=true)
+        {
+            await CopyPersonalPlaylistContentsAsync(await src.GetYouTubeExplodeVideoIdsAsync().ToPersonalPlaylist(res),src,dest,progress,token,copyThumbnails);
+        }
+        public static async Task CopyAllPlaylistsAsync(ITYTDBase src,IStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken),bool copyThumbnails=true,bool copyContents=true)
+        {
+            List<SavedPlaylist> pl=new List<SavedPlaylist>();
+            await foreach(var playlist in src.GetPlaylistsAsync())
+            {
+                pl.Add(playlist);
+            }
+             int total=pl.Count;
+                int i = 0;
+                double segLen = 1.0 / total;
+                foreach(var item in pl)
+                {
+                    if(token.IsCancellationRequested) return;
+                    await CopyPlaylistAsync(item.Id,src,dest,res,new Progress<double>(e=>{
+                        double percent = e / total;
+                    percent += segLen * i;
+                    if(percent >= 1) percent=1;
+                    if(percent <= 0) percent= 0;
+                    progress?.Report(percent);
+                    }),token,copyThumbnails,copyContents);
+                    i++;
+                }
+        }
+        public static async Task CopyAllChannelsAsync(ITYTDBase src,IStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken),bool copyThumbnails=true,bool copyContents=false)
+        {
+            //copying all channels is equivalent to copying all videos except we copy all channels info also
+            await foreach(var item in src.GetChannelsAsync())
+            {
+                await dest.WriteChannelInfoAsync(item);
+            }
+            if(copyContents)
+            await CopyAllVideosAsync(src,dest,res,progress,token,copyThumbnails);
+        }
+        public static async Task CopyPersonalPlaylistContentsAsync(List<(VideoId Id,Resolution Resolution)> list,ITYTDBase src,IStorage dest,IProgress<double> progress=null,CancellationToken token=default(CancellationToken), bool copyThumbnails=true)
+        {
+            int total=list.Count;
+                int i = 0;
+                double segLen = 1.0 / total;
+
+                foreach(var item in list)
+                {
+                    if(token.IsCancellationRequested) return;
+                    await CopyVideoAsync(item.Id,src,dest,item.Resolution,new Progress<double>(e=>{
+                        double percent = e / total;
+                    percent += segLen * i;
+                    if(percent >= 1) percent=1;
+                    if(percent <= 0) percent= 0;
+                    progress?.Report(percent);
+                    }),token,copyThumbnails);
+                    i++;
+                }
+        }
+        public static async Task CopyPlaylistContentsAsync(SavedPlaylist list,ITYTDBase src,IStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken), bool copyThumbnails=true)
+        {
+           
+            await CopyPersonalPlaylistContentsAsync(list.ToPersonalPlaylist(res),src,dest,progress,token,copyThumbnails);
+        }
+        public static async Task CopyPlaylistAsync(PlaylistId id,ITYTDBase src,IStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token = default(CancellationToken),bool copyThumbnails=true,bool copyContents=true)
+        {
+            //copy playlist and videos
+            if(!src.PlaylistInfoExists(id)) return;
+            var playlist=await src.GetPlaylistInfoAsync(id);
+            await dest.WritePlaylistInfoAsync(playlist);
+            if(copyContents)
+            await CopyPlaylistContentsAsync(playlist,src,dest,res,progress,token,copyThumbnails);
+        }
+        public static async Task CopyVideoAsync(VideoId id,ITYTDBase src,IStorage dest,Resolution res=Resolution.PreMuxed,IProgress<double> progress=null,CancellationToken token=default(CancellationToken),bool copyThumbnails=true)
+        {
+                if(copyThumbnails)
+                {
+                    await CopyThumbnailsAsync(id.Value,src,dest,progress,token);
+                }
+            string resDir = ResolutionToDirectory(res);
+                  
+            string infoFile = $"Info/{id}.json";
+
+            string streamInfo = $"StreamInfo/{id}.json";
+           string path="";
+            if(src.VideoInfoExists(id))
+            {
+              
+                SavedVideo video = await src.GetVideoInfoAsync(id);
+                path=await BestStreams.GetPathResolution(src,video,res);
+                if(!dest.VideoInfoExists(id))
+                {
+                    await dest.WriteVideoInfoAsync(video);
+                }
+            }else{
+                return;
+            }            
+            if(string.IsNullOrWhiteSpace(path)) return;
+            if(await src.FileExistsAsync(streamInfo))
+            {
+                if(!await dest.FileExistsAsync(streamInfo))
+                {
+                    string f = await src.ReadAllTextAsync(streamInfo);
                     await dest.WriteAllTextAsync(infoFile,f);
                 }
             }
@@ -520,9 +774,13 @@ namespace Tesses.YouTubeDownloader
             return $"[{Offset}-{Offset.Add(Length)}] {ChapterName}";
         }
     }
-    public interface IWritable
+    public interface IPersonalPlaylistGet
     {
-        public IAsyncEnumerable<(VideoId Id,Resolution Resolution)> GetPersonalPlaylistContentsAsync(string name);
-        public Task WriteAllTextAsync(string path,string data);
+           public IAsyncEnumerable<(VideoId Id,Resolution Resolution)> GetPersonalPlaylistContentsAsync(string name);
+
+    }
+    public interface IWritable : IPersonalPlaylistGet
+    {
+             public Task WriteAllTextAsync(string path,string data);
     }
 }

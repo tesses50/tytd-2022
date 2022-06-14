@@ -18,7 +18,7 @@ namespace Tesses.YouTubeDownloader
 
         public BestStreamInfo AudioOnlyStreamInfo {get;set;}
 
-        public static async Task<string> GetPathResolution(TYTDBase storage,SavedVideo video,Resolution resolution=Resolution.PreMuxed)
+        public static async Task<string> GetPathResolution(ITYTDBase storage,SavedVideo video,Resolution resolution=Resolution.PreMuxed)
         {
             if(video.LegacyVideo)
             {
@@ -45,7 +45,7 @@ namespace Tesses.YouTubeDownloader
     
     public class BestStreamInfo : IStreamInfo
     {
-        public static async Task<BestStreams> GetBestStreams(TYTDBase storage,VideoId id)
+        public static async Task<BestStreams> GetBestStreams(ITYTDBase storage,VideoId id)
         {
             //Console.WriteLine("IN FUNC");
             if(storage.DirectoryExists("StreamInfo"))
@@ -66,7 +66,7 @@ namespace Tesses.YouTubeDownloader
             }
             return null;
         }
-        public static async Task<BestStreams> GetBestStreams(TYTDStorage storage,VideoId id,CancellationToken token=default(CancellationToken),bool expire_check=true)
+        public static async Task<BestStreams> GetBestStreams(IStorage storage,VideoId id,CancellationToken token=default(CancellationToken),bool expire_check=true)
         {
             if(storage.DirectoryExists("StreamInfo"))
             {

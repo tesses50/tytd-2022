@@ -64,8 +64,8 @@ namespace Tesses.YouTubeDownloader.Server
     }
     internal class ApiStorage : Tesses.WebServer.Server
     {
-        TYTDBase baseCtl;
-        public ApiStorage(TYTDBase baseCtl)
+        ITYTDBase baseCtl;
+        public ApiStorage(ITYTDBase baseCtl)
         {
             this.baseCtl=baseCtl;
 
@@ -341,7 +341,7 @@ namespace Tesses.YouTubeDownloader.Server
         }
         public async Task Subscriptions(ServerContext ctx)
         {
-            TYTDStorage storage = Downloader as TYTDStorage;
+            IStorage storage = Downloader as IStorage;
             if(storage != null)
             {
                
@@ -355,7 +355,7 @@ namespace Tesses.YouTubeDownloader.Server
         }
         public async Task Resubscribe(ServerContext ctx)
                 {
-            TYTDStorage storage = Downloader as TYTDStorage;
+            IStorage storage = Downloader as IStorage;
             if(storage != null)
             {
                 string id;
@@ -389,7 +389,7 @@ namespace Tesses.YouTubeDownloader.Server
 
         public async Task Unsubscribe(ServerContext ctx)
         {
-        TYTDStorage storage = Downloader as TYTDStorage;
+        IStorage storage = Downloader as IStorage;
             if(storage != null)
             {
                 string id;
@@ -415,7 +415,7 @@ namespace Tesses.YouTubeDownloader.Server
     }
         public async Task Subscribe(ServerContext ctx)
         {
-            TYTDStorage storage = Downloader as TYTDStorage;
+            IStorage storage = Downloader as IStorage;
             if(storage != null)
             {
                 string id;
@@ -595,7 +595,7 @@ namespace Tesses.YouTubeDownloader.Server
         /// Constructor
         /// </summary>
         /// <param name="baseCtl">TYTD context</param>
-        public TYTDServer(TYTDBase baseCtl)
+        public TYTDServer(ITYTDBase baseCtl)
         {
             ExtensionsServer=new ChangeableServer();
             RootServer=new ChangeableServer();

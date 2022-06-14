@@ -270,6 +270,19 @@ namespace Tesses.YouTubeDownloader
             List<Thumbnail> thumbnails=new List<Thumbnail>();
             return new Playlist(Id,Title,new Author(AuthorChannelId,AuthorTitle),Description,thumbnails);
         }
+
+        public List<(VideoId Id,Resolution Resolution)> ToPersonalPlaylist(Resolution res=Resolution.PreMuxed)
+        {
+            List<(VideoId Id,Resolution Resolution)> items=new List<(VideoId Id, Resolution Resolution)>();
+            if(Videos !=null)
+            {
+                foreach(var vid in Videos)
+                {
+                    items.Add((vid,res));
+                }
+            }
+            return items;
+        }
         
         public async IAsyncEnumerable<SavedVideo> GetVideosAsync(TYTDBase baseCls)
         {

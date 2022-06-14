@@ -44,6 +44,7 @@ namespace Tesses.YouTubeDownloader
         public readonly SavedVideoProgress Progress = new SavedVideoProgress();
         private async Task ReportProgress(double progress)
         {
+            
             Progress.Progress = (int)(progress * 100);
             Progress.ProgressRaw = progress;
 

@@ -9,10 +9,11 @@ using System.Net.Http;
 using System.IO;
 using YoutubeExplode.Playlists;
 using YoutubeExplode.Channels;
+using Newtonsoft.Json;
 
 namespace Tesses.YouTubeDownloader
 {
-    public abstract partial class TYTDStorage : TYTDBase, IWritable, IDownloader
+    public abstract partial class TYTDStorage : TYTDBase, IStorage
     {
         private static readonly HttpClient _default = new HttpClient();
         public abstract Task<Stream> CreateAsync(string path);
@@ -43,14 +44,38 @@ namespace Tesses.YouTubeDownloader
 
         bool can_download=true;
         public bool CanDownload {get {return can_download;} set {can_download=value;}}
-        
+         public IExtensionContext ExtensionContext {get;set;}
+        public HttpClient HttpClient {get;set;}
+        public YoutubeClient YoutubeClient {get;set;}
         public abstract void MoveDirectory(string src,string dest);
         public abstract void DeleteFile(string file);
         public abstract void DeleteDirectory(string dir,bool recursive=false);
-        public IExtensionContext ExtensionContext {get;set;}
-        public HttpClient HttpClient {get;set;}
-        public YoutubeClient YoutubeClient {get;set;}
+       
 
+        public async Task WriteVideoInfoAsync(SavedVideo info)
+        {
+            string file = $"Info/{info.Id}.json";
+            if(!FileExists(file))
+            {
+               await WriteAllTextAsync(file,JsonConvert.SerializeObject(info));
+            }
+        }
+        public async Task WritePlaylistInfoAsync(SavedPlaylist info)
+        {
+             string file = $"Playlist/{info.Id}.json";
+            if(!FileExists(file))
+            {
+               await WriteAllTextAsync(file,JsonConvert.SerializeObject(info));
+            }
+        }
+        public async Task WriteChannelInfoAsync(SavedChannel info)
+        {
+             string file = $"Channel/{info.Id}.json";
+            if(!FileExists(file))
+            {
+               await WriteAllTextAsync(file,JsonConvert.SerializeObject(info));
+            }
+        }
         public async Task AddPlaylistAsync(PlaylistId id,Resolution resolution=Resolution.PreMuxed)
         {
             lock(Temporary)
