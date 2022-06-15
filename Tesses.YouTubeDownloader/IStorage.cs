@@ -54,6 +54,6 @@ namespace Tesses.YouTubeDownloader
         Task<bool> DownloadVideoOnlyAsync(SavedVideo video,CancellationToken token,IProgress<double> progress,bool report=true);
         Task MoveLegacyStreams(SavedVideo video,BestStreams streams);
          
-      
+        void StartLoop(CancellationToken token=default(CancellationToken));
     }
 }

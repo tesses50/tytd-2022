@@ -573,6 +573,13 @@ namespace Tesses.YouTubeDownloader
                 e.Unsubscribe(id);
             });
         }
+
+        public void StartLoop(CancellationToken token = default)
+        {
+            StorageAsStorage((e)=>{
+                e.StartLoop(token);
+            });
+        }
     }
 
     public class DownloaderMigration

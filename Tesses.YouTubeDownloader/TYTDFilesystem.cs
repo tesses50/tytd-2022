@@ -85,17 +85,33 @@ namespace Tesses.YouTubeDownloader
 
         public override async IAsyncEnumerable<string> EnumerateDirectoriesAsync(string path)
         {
+            if(string.IsNullOrWhiteSpace(path))
+            {
+                foreach(var item in Directory.EnumerateDirectories(Environment.CurrentDirectory))
+                {
+                      yield return await Task.FromResult(Path.GetFileName(item));
+                }
+            }else{
             foreach(var dir in Directory.EnumerateDirectories(path))
             {
                 yield return await Task.FromResult(Path.GetFileName(dir));
+            }
             }
         }
 
         public override async IAsyncEnumerable<string> EnumerateFilesAsync(string path)
         {
+             if(string.IsNullOrWhiteSpace(path))
+            {
+                foreach(var item in Directory.EnumerateFiles(Environment.CurrentDirectory))
+                {
+                      yield return await Task.FromResult(Path.GetFileName(item));
+                }
+            }else{
              foreach(var file in Directory.EnumerateFiles(path))
             {
                 yield return await Task.FromResult(Path.GetFileName(file));
+            }
             }
         }
 
@@ -217,17 +233,33 @@ namespace Tesses.YouTubeDownloader
 
         public override async IAsyncEnumerable<string> EnumerateDirectoriesAsync(string path)
         {
+             if(string.IsNullOrWhiteSpace(path))
+            {
+                foreach(var item in Directory.EnumerateDirectories(_path))
+                {
+                      yield return await Task.FromResult(Path.GetFileName(item));
+                }
+            }else{
             foreach(var dir in Directory.EnumerateDirectories(GetPath(path)))
             {
                 yield return await Task.FromResult(Path.GetFileName(dir));
+            }
             }
         }
 
         public override async IAsyncEnumerable<string> EnumerateFilesAsync(string path)
         {
+             if(string.IsNullOrWhiteSpace(path))
+            {
+                foreach(var item in Directory.EnumerateFiles(_path))
+                {
+                      yield return await Task.FromResult(Path.GetFileName(item));
+                }
+            }else{
              foreach(var file in Directory.EnumerateFiles(GetPath(path)))
             {
                 yield return await Task.FromResult(Path.GetFileName(file));
+            }
             }
         }
 
