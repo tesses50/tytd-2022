@@ -43,7 +43,7 @@ namespace Tesses.YouTubeDownloader
         public async Task AddChannelAsync(ChannelId id, Resolution resolution = Resolution.PreMuxed)
         {
             try{
-            await client.GetAsync($"{url}api/v2/AddChannel?v={id.Value}&res={resolution.ToString()}");
+            await client.GetStringAsync($"{url}api/v2/AddChannel?v={id.Value}&res={resolution.ToString()}");
             }catch(Exception ex)
             {
                 _=ex;
@@ -53,7 +53,7 @@ namespace Tesses.YouTubeDownloader
         public async Task AddPlaylistAsync(PlaylistId id, Resolution resolution = Resolution.PreMuxed)
         {
            try{
-            await client.GetAsync($"{url}api/v2/AddPlaylist?v={id.Value}&res={resolution.ToString()}");
+            await client.GetStringAsync($"{url}api/v2/AddPlaylist?v={id.Value}&res={resolution.ToString()}");
             }catch(Exception ex)
             {
                 _=ex;
@@ -63,7 +63,7 @@ namespace Tesses.YouTubeDownloader
         public async Task AddUserAsync(UserName userName, Resolution resolution = Resolution.PreMuxed)
         {
             try{
-            await client.GetAsync($"{url}api/v2/AddUser?v={userName.Value}&res={resolution.ToString()}");
+            await client.GetStringAsync($"{url}api/v2/AddUser?v={userName.Value}&res={resolution.ToString()}");
             }catch(Exception ex)
             {
                 _=ex;
@@ -73,7 +73,7 @@ namespace Tesses.YouTubeDownloader
         public async Task AddVideoAsync(VideoId id, Resolution resolution = Resolution.PreMuxed)
         {
             try{
-            await client.GetAsync($"{url}api/v2/AddVideo?v={id.Value}&res={resolution.ToString()}");
+            await client.GetStringAsync($"{url}api/v2/AddVideo?v={id.Value}&res={resolution.ToString()}");
             }catch(Exception ex)
             {
                 _=ex;
