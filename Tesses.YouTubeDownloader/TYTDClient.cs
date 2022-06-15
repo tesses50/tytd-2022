@@ -17,32 +17,33 @@ namespace Tesses.YouTubeDownloader
 {
     public class TYTDClient : TYTDBase,IDownloader
     {
+        string url;
         public TYTDClient(string url)
         {
             client=new HttpClient();
-            client.BaseAddress=new Uri(url);
+            this.url = url.TrimEnd('/') + '/';
         }
        
         public TYTDClient(HttpClient clt,string url)
         {
             client = clt;
-            client.BaseAddress=new Uri(url);
+            this.url = url.TrimEnd('/') + '/';
         }
         public TYTDClient(HttpClient clt, Uri uri)
         {
             client=clt;
-            client.BaseAddress=uri;
+           this.url = url.ToString().TrimEnd('/') + '/';
         }
         public TYTDClient(Uri uri)
         {
             client=new HttpClient();
-            client.BaseAddress=uri;
+            this.url = url.ToString().TrimEnd('/') + '/';
         }
         HttpClient client;
         public async Task AddChannelAsync(ChannelId id, Resolution resolution = Resolution.PreMuxed)
         {
             try{
-            await client.GetAsync($"/api/v2/AddChannel?v={id.Value}&res={resolution.ToString()}");
+            await client.GetAsync($"{url}api/v2/AddChannel?v={id.Value}&res={resolution.ToString()}");
             }catch(Exception ex)
             {
                 _=ex;
@@ -52,7 +53,7 @@ namespace Tesses.YouTubeDownloader
         public async Task AddPlaylistAsync(PlaylistId id, Resolution resolution = Resolution.PreMuxed)
         {
            try{
-            await client.GetAsync($"/api/v2/AddPlaylist?v={id.Value}&res={resolution.ToString()}");
+            await client.GetAsync($"{url}api/v2/AddPlaylist?v={id.Value}&res={resolution.ToString()}");
             }catch(Exception ex)
             {
                 _=ex;
@@ -62,7 +63,7 @@ namespace Tesses.YouTubeDownloader
         public async Task AddUserAsync(UserName userName, Resolution resolution = Resolution.PreMuxed)
         {
             try{
-            await client.GetAsync($"/api/v2/AddUser?v={userName.Value}&res={resolution.ToString()}");
+            await client.GetAsync($"{url}api/v2/AddUser?v={userName.Value}&res={resolution.ToString()}");
             }catch(Exception ex)
             {
                 _=ex;
@@ -72,7 +73,7 @@ namespace Tesses.YouTubeDownloader
         public async Task AddVideoAsync(VideoId id, Resolution resolution = Resolution.PreMuxed)
         {
             try{
-            await client.GetAsync($"/api/v2/AddVideo?v={id.Value}&res={resolution.ToString()}");
+            await client.GetAsync($"{url}api/v2/AddVideo?v={id.Value}&res={resolution.ToString()}");
             }catch(Exception ex)
             {
                 _=ex;
@@ -82,7 +83,7 @@ namespace Tesses.YouTubeDownloader
         public override async Task<bool> DirectoryExistsAsync(string path)
         {
            try{
-            string v=await client.GetStringAsync($"/api/Storage/DirectoryExists/{path}");
+            string v=await client.GetStringAsync($"{url}api/Storage/DirectoryExists/{path}");
             return v=="true";
             }catch(Exception ex)
             {
@@ -95,7 +96,7 @@ namespace Tesses.YouTubeDownloader
         {
             List<string> items=null;
              try{
-            string v=await client.GetStringAsync($"/api/Storage/GetDirectory/{path}");
+            string v=await client.GetStringAsync($"{url}api/Storage/GetDirectory/{path}");
             items=JsonConvert.DeserializeObject<List<string>>(v);
             }catch(Exception ex)
             {
@@ -116,7 +117,7 @@ namespace Tesses.YouTubeDownloader
         {
             string v="[]";
             try{
-                   v=await client.GetStringAsync("/api/v2/subscriptions");
+                   v=await client.GetStringAsync("{url}api/v2/subscriptions");
                }catch(Exception ex)
             {
                 _=ex;
@@ -131,7 +132,7 @@ namespace Tesses.YouTubeDownloader
         public async Task UnsubscribeAsync(ChannelId id)
         {
             try{
-                  string v=await client.GetStringAsync($"/api/v2/unsubscribe?id={id.Value}");
+                  string v=await client.GetStringAsync($"{url}api/v2/unsubscribe?id={id.Value}");
             
             }catch(Exception ex)
             {
@@ -142,7 +143,7 @@ namespace Tesses.YouTubeDownloader
         {
               try{
                   string dlcid=downloadChannelInfo ? "true" : "false";
-                  string v=await client.GetStringAsync($"/api/v2/subscribe?id={id.Value}&conf={bellInfo.ToString()}&getinfo={dlcid}");
+                  string v=await client.GetStringAsync($"{url}api/v2/subscribe?id={id.Value}&conf={bellInfo.ToString()}&getinfo={dlcid}");
             
             }catch(Exception ex)
             {
@@ -154,7 +155,7 @@ namespace Tesses.YouTubeDownloader
              try{
                 
                   
-                  string v=await client.GetStringAsync($"/api/v2/subscribe?id={ WebUtility.UrlEncode(name.Value)}&conf={info.ToString()}");
+                  string v=await client.GetStringAsync($"{url}api/v2/subscribe?id={ WebUtility.UrlEncode(name.Value)}&conf={info.ToString()}");
             
             }catch(Exception ex)
             {
@@ -166,7 +167,7 @@ namespace Tesses.YouTubeDownloader
              try{
                 
                   
-                  string v=await client.GetStringAsync($"/api/v2/resubscribe?id={id.Value}&conf={info.ToString()}");
+                  string v=await client.GetStringAsync($"{url}api/v2/resubscribe?id={id.Value}&conf={info.ToString()}");
             
             }catch(Exception ex)
             {
@@ -177,7 +178,7 @@ namespace Tesses.YouTubeDownloader
         {
             List<string> items=null;
              try{
-            string v=await client.GetStringAsync($"/api/Storage/GetFiles/{path}");
+            string v=await client.GetStringAsync($"{url}api/Storage/GetFiles/{path}");
             items=JsonConvert.DeserializeObject<List<string>>(v);
             }catch(Exception ex)
             {
@@ -198,7 +199,7 @@ namespace Tesses.YouTubeDownloader
         public async override Task<bool> FileExistsAsync(string path)
         {
            try{
-            string v=await client.GetStringAsync($"/api/Storage/FileExists/{path}");
+            string v=await client.GetStringAsync($"{url}api/Storage/FileExists/{path}");
             return v=="true";
             }catch(Exception ex)
             {
@@ -210,7 +211,7 @@ namespace Tesses.YouTubeDownloader
         {
                
              try{
-            string v=await client.GetStringAsync("/api/v2/QueueList");
+            string v=await client.GetStringAsync($"{url}api/v2/QueueList");
             return JsonConvert.DeserializeObject<List<(SavedVideo Video,Resolution res)>>(v);
             }catch(Exception ex)
             {
@@ -223,7 +224,7 @@ namespace Tesses.YouTubeDownloader
         {
                
              try{
-            string v=await client.GetStringAsync("/api/v2/Progress");
+            string v=await client.GetStringAsync($"{url}api/v2/Progress");
             return JsonConvert.DeserializeObject<SavedVideoProgress>(v);
             }catch(Exception ex)
             {
@@ -245,7 +246,7 @@ namespace Tesses.YouTubeDownloader
         public override async Task<long> GetLengthAsync(string path)
         {
             try{
-                var item=await client.GetAsync($"/api/Storage/File/{path}");
+                var item=await client.GetAsync($"{url}api/Storage/File/{path}");
                 return item.Content.Headers.ContentLength.GetValueOrDefault();
             }catch(Exception ex)
             {
@@ -259,7 +260,7 @@ namespace Tesses.YouTubeDownloader
         {
                
              try{
-            Stream v=await client.GetStreamAsync($"/api/Storage/File/{path}");
+            Stream v=await client.GetStreamAsync($"{url}api/Storage/File/{path}");
             return v;
             }catch(Exception ex)
             {
