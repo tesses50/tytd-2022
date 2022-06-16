@@ -868,3 +868,5 @@ Other Licenses:<br>
 [DiscUtils](LICENSE.DiskUtils)<br>
 [Tesses.WebServer](LICENSE.Tesses.WebServer)<br>
 [Zio](LICENSE.Zio)<br>
+
+I also use HttpStream which is MIT according to github repo

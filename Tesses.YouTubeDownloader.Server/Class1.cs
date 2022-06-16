@@ -470,7 +470,7 @@ namespace Tesses.YouTubeDownloader.Server
          public async Task AddVideo(ServerContext ctx)
         {
             string id;
-            Console.WriteLine(ctx.RawUrl);
+            
             if(ctx.QueryParams.TryGetFirst("v",out id))
             {
                 Resolution resolution=Resolution.PreMuxed;

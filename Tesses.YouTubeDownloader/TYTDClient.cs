@@ -12,6 +12,7 @@ using YoutubeExplode.Channels;
 using YoutubeExplode.Playlists;
 using System.Net.Http;
 using System.Net;
+using Espresso3389.HttpStream;
 
 namespace Tesses.YouTubeDownloader
 {
@@ -243,31 +244,20 @@ namespace Tesses.YouTubeDownloader
             return GetQueueListAsync().GetAwaiter().GetResult();
         }
 
-        public override async Task<long> GetLengthAsync(string path)
-        {
-            try{
-                var item=await client.GetAsync($"{url}api/Storage/File/{path}");
-                return item.Content.Headers.ContentLength.GetValueOrDefault();
-            }catch(Exception ex)
-            {
-                _=ex;
-            }
-
-            return 0;
-        }
-        
         public async override Task<Stream> OpenReadAsync(string path)
         {
-               
+            
              try{
-            Stream v=await client.GetStreamAsync($"{url}api/Storage/File/{path}");
-            return v;
+        
+             HttpStream v=new HttpStream(new Uri($"{url}api/Storage/File/{path}"),new MemoryStream(),true,32 * 1024,null,client);
+             
+            return await Task.FromResult(v);
             }catch(Exception ex)
             {
                 _=ex;
             }
 
-           return Stream.Null;
+           return await Task.FromResult(Stream.Null);
         }
 
        
