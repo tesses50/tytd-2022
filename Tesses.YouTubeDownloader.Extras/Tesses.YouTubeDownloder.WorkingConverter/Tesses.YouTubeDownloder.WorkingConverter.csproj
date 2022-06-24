@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Tesses.YouTubeDownloader\Tesses.YouTubeDownloader.csproj" />
+    <ProjectReference Include="..\..\Tesses.YouTubeDownloader\Tesses.YouTubeDownloader.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

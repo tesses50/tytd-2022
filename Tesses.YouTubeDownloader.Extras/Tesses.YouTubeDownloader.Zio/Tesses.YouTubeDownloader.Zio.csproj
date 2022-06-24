@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Tesses.YouTubeDownloader\Tesses.YouTubeDownloader.csproj" />
+    <ProjectReference Include="..\..\Tesses.YouTubeDownloader\Tesses.YouTubeDownloader.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,10 +16,10 @@
       <PackageId>Tesses.YouTubeDownloader.Zio</PackageId>
     <Author>Mike Nolan</Author>
     <Company>Tesses</Company>
-     <Version>1.0.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+     <Version>1.0.0.1</Version>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
      <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <FileVersion>1.0.0.0</FileVersion>
+    <FileVersion>1.0.0.1</FileVersion>
     <Description>Adds Zio filesystem support</Description>
     <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
     <PackageTags>YoutubeExplode, YouTube, YouTubeDownloader</PackageTags>

@@ -55,5 +55,6 @@ namespace Tesses.YouTubeDownloader
         Task MoveLegacyStreams(SavedVideo video,BestStreams streams);
          
         void StartLoop(CancellationToken token=default(CancellationToken));
+        event EventHandler<TYTDErrorEventArgs> Error;
     }
 }

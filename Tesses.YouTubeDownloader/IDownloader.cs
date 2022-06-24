@@ -10,7 +10,7 @@ using YoutubeExplode.Playlists;
 using YoutubeExplode.Channels;
 namespace Tesses.YouTubeDownloader
 {
-    public interface IDownloader
+    public interface IDownloader : IPersonalPlaylistSet
     {
         Task AddVideoAsync(VideoId id,Resolution resolution=Resolution.PreMuxed);
         Task AddPlaylistAsync(PlaylistId id,Resolution resolution=Resolution.PreMuxed);
@@ -25,5 +25,6 @@ namespace Tesses.YouTubeDownloader
         Task SubscribeAsync(ChannelId id,bool downloadChannelInfo=false,ChannelBellInfo bellInfo = ChannelBellInfo.NotifyAndDownload);
         Task SubscribeAsync(UserName name,ChannelBellInfo info=ChannelBellInfo.NotifyAndDownload);
         Task ResubscribeAsync(ChannelId id,ChannelBellInfo info=ChannelBellInfo.NotifyAndDownload);
+        void DeletePersonalPlaylist(string name);
     }
 }

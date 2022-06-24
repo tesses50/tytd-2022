@@ -18,7 +18,7 @@ namespace Tesses.YouTubeDownloader
         
         IAsyncEnumerable<string> GetPersonalPlaylistsAsync();
         Task<(String Path,bool Delete)> GetRealUrlOrPathAsync(string path);       
-        Task<long> GetLengthAsync(string path);
+        
         bool FileExists(string path);
         IAsyncEnumerable<string> GetVideoIdsAsync();
         Task<SavedVideo> GetVideoInfoAsync(VideoId id);
@@ -46,7 +46,7 @@ namespace Tesses.YouTubeDownloader
 
         IEnumerable<string> EnumerateFiles(string path);
         IEnumerable<string> EnumerateDirectories(string path);
-        Task<Stream> OpenReadAsyncWithLength(string path);
+        
         Task<Stream> OpenReadAsync(string path);
 
         Task<bool> FileExistsAsync(string path);
@@ -56,5 +56,7 @@ namespace Tesses.YouTubeDownloader
         IAsyncEnumerable<string> EnumerateFilesAsync(string path);
 
         IAsyncEnumerable<string> EnumerateDirectoriesAsync(string path);
+
+        
     }
 }

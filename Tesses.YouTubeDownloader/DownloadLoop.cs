@@ -145,7 +145,7 @@ namespace Tesses.YouTubeDownloader
             }
             }catch(Exception ex)
             {
-                await GetLogger().WriteAsync(ex);
+                await GetLogger().WriteAsync(ex,video.Id);
             }
 
         }
@@ -154,7 +154,7 @@ namespace Tesses.YouTubeDownloader
    
             if (await FileExistsAsync(path))
             {
-                return (await GetLengthAsync(path) == 0);
+                return ((await OpenReadAsync(path)).Length == 0);
             }
             return true;
         }
@@ -205,8 +205,9 @@ namespace Tesses.YouTubeDownloader
                 }
                 }catch(Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
                     _=ex;
+                    Console.WriteLine("FFMPEG ERROR, sorry cant read logging config");
+                    
                     return false;
                 }
                 return true;
@@ -332,10 +333,11 @@ namespace Tesses.YouTubeDownloader
                 DeleteIfExists(video_bin);
                 DeleteIfExists(audio_bin);
                 DeleteIfExists(output_mkv);
-                long len=await GetLengthAsync(videoSrc);
+                
 
                 using(var vstrm_src=await OpenReadAsync(videoSrc))
                 {
+                    long len = vstrm_src.Length;
                     using(var vstrm_dest = File.Create(video_bin))
                     {
                         Console.WriteLine("Opening vstream");
@@ -359,7 +361,7 @@ namespace Tesses.YouTubeDownloader
                     using(var astrm_dest = File.Create(audio_bin))
                     {
                         Console.WriteLine("opening astream");
-                        if(!await CopyStreamAsync(astrm_src,astrm_dest,0,len,4096,
+                        if(!await CopyStreamAsync(astrm_src,astrm_dest,0,astrm_src.Length,4096,
                             new Progress<double>((e)=>{
                                 if(progress !=null)
                                 {
@@ -455,6 +457,10 @@ namespace Tesses.YouTubeDownloader
             if(!can_download) return false;
             if(streams != null)
             {
+                if(streams.VideoFrozen)
+                {
+                    throw new Exception($"[TYTD Specific Error] Video is frozen, we wont do anything with the video.\nplease set \"VideoFrozen\": false in the file \"Info/{video.Id}.json\" to fix this problem");
+                }
                 await MoveLegacyStreams(video,streams);
                 string complete = $"VideoOnly/{video.Id}.{streams.VideoOnlyStreamInfo.Container}";
                 string incomplete = $"VideoOnly/{video.Id}incomplete.{streams.VideoOnlyStreamInfo.Container}";
@@ -472,11 +478,11 @@ namespace Tesses.YouTubeDownloader
                             }
                             if(report)
                            await ReportStartVideo(video, Resolution.VideoOnly,streams.VideoOnlyStreamInfo.Size.Bytes);
-                            long len=await GetLengthAsync(incomplete);
+                            
                             
                             using(var dest = await OpenOrCreateAsync(incomplete))
                             {
-                                ret=await CopyStreamAsync(strm,dest,len,streams.VideoOnlyStreamInfo.Size.Bytes,4096,progress,token);
+                                ret=await CopyStreamAsync(strm,dest,dest.Length,streams.VideoOnlyStreamInfo.Size.Bytes,4096,progress,token);
                             }
                             if(ret)
                             {
@@ -511,6 +517,7 @@ namespace Tesses.YouTubeDownloader
         }
         public async Task MoveLegacyStreams(SavedVideo video,BestStreams streams)
         {
+            if(video.VideoFrozen) return;
             if(video.LegacyVideo)
             {
                 string legacyVideoOnlyComplete = $"VideoOnly/{video.Id}.mp4";
@@ -550,6 +557,10 @@ namespace Tesses.YouTubeDownloader
             if(!can_download) return false;
             if(streams != null)
             {
+                if(streams.VideoFrozen)
+                {
+                    throw new Exception($"[TYTD Specific Error] Video is frozen, we wont do anything with the video.\nplease set \"VideoFrozen\": false in the file \"Info/{video.Id}.json\" to fix this problem");
+                }
                 string complete = $"AudioOnly/{video.Id}.{streams.AudioOnlyStreamInfo.Container}";
                 string incomplete = $"AudioOnly/{video.Id}incomplete.{streams.AudioOnlyStreamInfo.Container}";
                 await MoveLegacyStreams(video,streams);
@@ -568,11 +579,11 @@ namespace Tesses.YouTubeDownloader
                             }
                             if(report)
                            await ReportStartVideo(video, Resolution.AudioOnly,streams.AudioOnlyStreamInfo.Size.Bytes);
-                            long len=await GetLengthAsync(incomplete);
+           
                             
                             using(var dest = await OpenOrCreateAsync(incomplete))
                             {
-                                ret=await CopyStreamAsync(strm,dest,len,streams.AudioOnlyStreamInfo.Size.Bytes,4096,progress,token);
+                                ret=await CopyStreamAsync(strm,dest,dest.Length,streams.AudioOnlyStreamInfo.Size.Bytes,4096,progress,token);
                             }
                             if(ret)
                             {
@@ -597,6 +608,10 @@ namespace Tesses.YouTubeDownloader
             if(!can_download) return;
             if(streams != null)
             {
+                if(streams.VideoFrozen)
+                {
+                    throw new Exception($"[TYTD Specific Error] Video is frozen, we wont do anything with the video.\nplease set \"VideoFrozen\": false in the file \"Info/{video.Id}.json\" to fix this problem");
+                }
                 await MoveLegacyStreams(video,streams);
                 string complete = $"PreMuxed/{video.Id}.{streams.MuxedStreamInfo.Container}";
                 string incomplete = $"PreMuxed/{video.Id}incomplete.{streams.MuxedStreamInfo.Container}";
@@ -616,11 +631,11 @@ namespace Tesses.YouTubeDownloader
                             }
                             if(report)
                             await ReportStartVideo(video,Resolution.PreMuxed,streams.MuxedStreamInfo.Size.Bytes);
-                            long len=await GetLengthAsync(incomplete);
+                        
                             bool ret;
                             using(var dest = await OpenOrCreateAsync(incomplete))
                             {
-                                ret=await CopyStreamAsync(strm,dest,len,streams.MuxedStreamInfo.Size.Bytes,4096,progress,token);
+                                ret=await CopyStreamAsync(strm,dest,dest.Length,streams.MuxedStreamInfo.Size.Bytes,4096,progress,token);
                             }
                             //We know its resolution 
                             if(ret)

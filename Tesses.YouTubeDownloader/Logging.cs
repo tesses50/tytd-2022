@@ -1,7 +1,3 @@
-
-
-
-
 using System;
 using YoutubeExplode;
 using YoutubeExplode.Videos;
@@ -22,8 +18,24 @@ namespace Tesses.YouTubeDownloader
     {
 
     }
+    public class TYTDErrorEventArgs : EventArgs
+    {
+        public TYTDErrorEventArgs(VideoId? id,Exception exception)
+        {
+            Id=id;
+            Exception=exception;
+            PrintError =true;
+        }
+        
+        public VideoId? Id {get;set;}
+
+        public Exception Exception {get;set;}
+
+        public bool PrintError {get;set;}
+    }
     public partial class TYTDStorage 
     {
+        public event EventHandler<TYTDErrorEventArgs> Error;
         internal  LoggerProperties Properties {get;set;}
            public LoggerProperties GetProperties()
         {
@@ -154,10 +166,17 @@ namespace Tesses.YouTubeDownloader
             //mtx.ReleaseMutex();
             }
         }
-
         public async Task WriteAsync(Exception ex)
         {
-            await WriteAsync($"Exception Catched:\n{ex.ToString()}",_storage.GetLoggerProperties().PrintErrors,true);
+            await WriteAsync(ex,null);
+        }
+        public async Task WriteAsync(Exception ex,VideoId? id)
+        {
+            TYTDErrorEventArgs args=new TYTDErrorEventArgs(id,ex);
+            _storage.ThrowError(args);
+            
+            await WriteAsync($"Exception Catched:\n{ex.ToString()}",_storage.GetLoggerProperties().PrintErrors && args.PrintError,true);
+            
         }
         public async Task WriteAsync(SavedVideo video)
         {

@@ -24,6 +24,8 @@ namespace Tesses.YouTubeDownloader
     }
     public class SavedVideoLegacy
     {
+      
+        
         public string Id {get;set;}
         public string Title {get;set;}
         public string AuthorChannelId {get;set;}
@@ -80,7 +82,10 @@ namespace Tesses.YouTubeDownloader
             UploadDate=new DateTime(1992,8,20);
             AddDate=DateTime.Now;
             LegacyVideo=false;
+            DownloadFrom="YouTube";
+            VideoFrozen=false;
         }
+
         public SavedVideo(Video video)
         {
             Id=video.Id;
@@ -96,11 +101,16 @@ namespace Tesses.YouTubeDownloader
             UploadDate = video.UploadDate.DateTime;
             AddDate=DateTime.Now;
             LegacyVideo=false;
+            DownloadFrom="YouTube";
+            VideoFrozen=false;
         }
         public bool LegacyVideo {get;set;}
-
+          public bool VideoFrozen {get;set;}
+        
+        public string DownloadFrom {get;set;}
         public SavedVideoLegacy ToLegacy()
         {
+        
             SavedVideoLegacy legacy=new SavedVideoLegacy();
             legacy.Thumbnails=new List<(int, int, string)>();
             legacy.Thumbnails.Add((120,90,$"https://s.ytimg.com/vi/{Id}/default.jpg"));
@@ -117,6 +127,8 @@ namespace Tesses.YouTubeDownloader
             legacy.Title=Title;
             legacy.UploadDate=UploadDate.ToString();
             legacy.Views=Views;
+            
+            
             return legacy;
         }
         public Video ToVideo()

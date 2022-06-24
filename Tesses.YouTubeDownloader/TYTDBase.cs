@@ -13,74 +13,18 @@ using YoutubeExplode.Playlists;
 using YoutubeExplode.Channels;
 namespace Tesses.YouTubeDownloader
 {
-    internal class TYTDBaseFileReader : Stream
-    {
-        //TYTDBase baseCtl;
-        Stream baseStrm;
-        long len;
-        private TYTDBaseFileReader(long leng)
-        {
-            len=leng;
-        }
-        public static async Task<Stream> GetStream(TYTDBase baseCtl,string path)
-        {
-            var basect=new TYTDBaseFileReader(await baseCtl.GetLengthAsync(path));
-
-            basect.baseStrm = await baseCtl.OpenReadAsync(path);
-            return basect;
-        }
-
-        public override bool CanRead => baseStrm.CanRead;
-
-        public override bool CanSeek => baseStrm.CanSeek;
-
-        public override bool CanWrite => false;
-
-        public override long Length => len;
-
-        public override long Position { get => baseStrm.Position; set => baseStrm.Position=value; }
-
-        public override void Flush()
-        {
-            baseStrm.Flush();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            return baseStrm.Read(buffer,offset,count);
-        }
-
-        public override long Seek(long offset, SeekOrigin origin)
-        {
-            return baseStrm.Seek(offset,origin);
-        }
-
-        public override void SetLength(long value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            throw new NotImplementedException();
-        }
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
-            return await baseStrm.ReadAsync(buffer,offset,count,cancellationToken);
-        }
-
-        public override void Close()
-        {
-            baseStrm.Close();
-        }
-    }
+  
       public abstract class TYTDBase : ITYTDBase
     {
-       
-
-        public async IAsyncEnumerable<(VideoId Id,Resolution Resolution)> GetPersonalPlaylistContentsAsync(string playlist)
+        
+        public bool PersonalPlaylistExists(string name)
         {
-            var ls=JsonConvert.DeserializeObject<List<(string Id,Resolution Resolution)>>(await ReadAllTextAsync($"PersonalPlaylist/{playlist}.json"));
+            return FileExists($"PersonalPlaylist/{name}.json");
+        }
+        public async IAsyncEnumerable<ListContentItem> GetPersonalPlaylistContentsAsync(string playlist)
+        {
+            if(!PersonalPlaylistExists(playlist)) yield break;
+            var ls=JsonConvert.DeserializeObject<List<ListContentItem>>(await ReadAllTextAsync($"PersonalPlaylist/{playlist}.json"));
             foreach(var item in ls)
             {
                 yield return await Task.FromResult(item);
@@ -113,14 +57,6 @@ namespace Tesses.YouTubeDownloader
         } 
         
        
-        public virtual async Task<long> GetLengthAsync(string path)
-        {
-            if(!await FileExistsAsync(path)) return 0;
-            using(var f = await OpenReadAsync(path))
-            {
-                return f.Length;
-            }
-        }
              public bool FileExists(string path)
         {
             return FileExistsAsync(path).GetAwaiter().GetResult();
@@ -182,17 +118,18 @@ namespace Tesses.YouTubeDownloader
         }
 
         public async Task<byte[]> ReadAllBytesAsync(string path,CancellationToken token=default(CancellationToken))
-        {
-            byte[] data=new byte[await GetLengthAsync(path)];
-            using(var strm = await OpenReadAsync(path))
+        {using(var strm = await OpenReadAsync(path))
             {
+            byte[] data=new byte[strm.Length];
+            
                 await strm.ReadAsync(data,0,data.Length,token);
                 if(token.IsCancellationRequested)
                 {
                     return new byte[0];
                 }
+                return data;
             }
-            return data;
+            
         }
         public async IAsyncEnumerable<string> GetPlaylistIdsAsync()
         {
@@ -287,10 +224,7 @@ namespace Tesses.YouTubeDownloader
                 yield return e.Current;
             }
         }
-        public async Task<Stream> OpenReadAsyncWithLength(string path)
-        {
-            return await TYTDBaseFileReader.GetStream(this,path);
-        }
+     
         public abstract Task<Stream> OpenReadAsync(string path);
 
         public abstract Task<bool> FileExistsAsync(string path);
@@ -302,7 +236,57 @@ namespace Tesses.YouTubeDownloader
         public abstract IAsyncEnumerable<string> EnumerateDirectoriesAsync(string path);
 
     }
-      public static class TYTDManager
+
+    public class ListContentItem
+    {
+        public ListContentItem()
+        {
+            Id="";
+            Resolution=Resolution.PreMuxed;
+        }
+        public ListContentItem(VideoId id)
+        {
+            Id=id.Value;
+            Resolution=Resolution.PreMuxed;
+        }
+        public ListContentItem(string id)
+        {
+            Id=id;
+            Resolution =Resolution.PreMuxed;
+        }
+        public ListContentItem(string id,Resolution resolution)
+        {
+            Id=id;
+            Resolution=resolution;
+        }
+        public ListContentItem(VideoId id,Resolution resolution)
+        {
+            Id=id.Value;
+            Resolution=resolution;
+        }
+        public string Id {get;set;}
+        public Resolution Resolution {get;set;}
+
+        public static implicit operator ListContentItem(VideoId id)
+        {
+            return new ListContentItem(id.Value,  Resolution.PreMuxed);
+        }
+        public static implicit operator VideoId?(ListContentItem item)
+        {
+            return VideoId.TryParse(item.Id);
+        }
+
+        public static implicit operator ListContentItem((VideoId Id,Resolution Resolution) item)
+        {
+            return new ListContentItem (item.Id,item.Resolution);
+        }
+        public static implicit operator (VideoId Id,Resolution Resolution)(ListContentItem item)
+        {
+            return (VideoId.Parse(item.Id),item.Resolution);
+        }
+    }
+
+    public static class TYTDManager
     {
         /// <summary>
         /// Add Video, Playlist, Channel Or Username
@@ -355,41 +339,9 @@ namespace Tesses.YouTubeDownloader
             }
 
         }
-        /// <summary>
-        /// Replace Personal Playlist
-        /// </summary>
-        /// <param name="name">Name of playlist</param>
-        /// <param name="items">Videos to set in playlist</param>
-        /// <returns></returns>
-        public static async Task ReplacePersonalPlaylistAsync(this IWritable writable,string name,IEnumerable<(VideoId Id,Resolution Resolution)> items)
-        {
-             List<(string Id,Resolution Resolution)> items0=new List<(string Id, Resolution Resolution)>();
-          
-             items0.AddRange(items.Select<(VideoId Id,Resolution Resolution),(string Id,Resolution Resolution)>((e)=>{
-                return (e.Id.Value,e.Resolution);
-            }) );
-            await writable.WriteAllTextAsync($"PersonalPlaylist/{name}.json",JsonConvert.SerializeObject(items0));
-            
-        }
-        /// <summary>
-        /// Append to PersonalPlaylist
-        /// </summary>
-        /// <param name="name">Name of playlist</param>
-        /// <param name="items">Videos to add in playlist</param>
-        public static async Task AddToPersonalPlaylistAsync(this IWritable writable, string name, IEnumerable<(VideoId Id, Resolution Resolution)> items)
-        {
-            
-            List<(string Id,Resolution Resolution)> items0=new List<(string Id, Resolution Resolution)>();
-            await foreach(var item in writable.GetPersonalPlaylistContentsAsync(name))
-            {
-                items0.Add(item);
-            }
-            items0.AddRange(items.Select<(VideoId Id,Resolution Resolution),(string Id,Resolution Resolution)>((e)=>{
-                return (e.Id.Value,e.Resolution);
-            }) );
-            await writable.WriteAllTextAsync($"PersonalPlaylist/{name}.json",JsonConvert.SerializeObject(items0));
-            
-        }
+
+    
+
         internal static void Print(this IProgress<string> prog,string text)
         {
             if(prog !=null)
@@ -429,11 +381,12 @@ namespace Tesses.YouTubeDownloader
              if(string.IsNullOrWhiteSpace(path)) return false;
 
                 bool ret=false;
-                double len=await src.GetLengthAsync(path);
-                if(await src.FileExistsAsync(path))
+                   if(await src.FileExistsAsync(path))
                 {
                     using(var srcFile = await src.OpenReadAsync(path))
                     {
+                double len=srcFile.Length;
+             
                     
                            ret= await CopyStream(srcFile,destFile,new Progress<long>((e)=>{
                             if(progress !=null)
@@ -546,9 +499,9 @@ namespace Tesses.YouTubeDownloader
         }
         public static async Task CopyFileFrom(this IStorage _dest,ITYTDBase _src,string src,string dest,IProgress<double> progress=null,CancellationToken token=default(CancellationToken))
         {
-            double len=await _src.GetLengthAsync(src);
+            
             using(var srcFile = await _src.OpenReadAsync(src))
-                {
+                {double len=srcFile.Length;
                     bool deleteFile=false;
                     using(var destFile = await _dest.CreateAsync(dest))
                     {
@@ -738,10 +691,11 @@ namespace Tesses.YouTubeDownloader
                 {
                     return;
                 }
-                double len=await src.GetLengthAsync(path);
+                
                 dest.CreateDirectory(resDir);
                 using(var srcFile = await src.OpenReadAsync(path))
                 {
+                    double len=srcFile.Length;
                     bool deleteFile=false;
                     using(var destFile = await dest.CreateAsync(path))
                     {
@@ -776,11 +730,25 @@ namespace Tesses.YouTubeDownloader
     }
     public interface IPersonalPlaylistGet
     {
-           public IAsyncEnumerable<(VideoId Id,Resolution Resolution)> GetPersonalPlaylistContentsAsync(string name);
+           IAsyncEnumerable<ListContentItem> GetPersonalPlaylistContentsAsync(string name);
+           bool PersonalPlaylistExists(string name);
+    }
+    public interface IPersonalPlaylistSet : IPersonalPlaylistGet
+    {
+          Task AddToPersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items);
+          
+          Task ReplacePersonalPlaylistAsync(string name,IEnumerable<ListContentItem> items);
+
+          Task RemoveItemFromPersonalPlaylistAsync(string name,VideoId id);
+
+          Task SetResolutionForItemInPersonalPlaylistAsync(string name,VideoId id,Resolution resolution);
+          
 
     }
-    public interface IWritable : IPersonalPlaylistGet
+    public interface IWritable : IPersonalPlaylistGet, IPersonalPlaylistSet
     {
              public Task WriteAllTextAsync(string path,string data);
     }
+
+
 }

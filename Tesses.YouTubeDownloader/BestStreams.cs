@@ -11,7 +11,7 @@ namespace Tesses.YouTubeDownloader
 {
     public class BestStreams
     {
-       
+        public bool VideoFrozen {get;set;}
         public BestStreamInfo MuxedStreamInfo {get;set;}
 
         public BestStreamInfo VideoOnlyStreamInfo {get;set;}
@@ -20,6 +20,7 @@ namespace Tesses.YouTubeDownloader
 
         public static async Task<string> GetPathResolution(ITYTDBase storage,SavedVideo video,Resolution resolution=Resolution.PreMuxed)
         {
+           
             if(video.LegacyVideo)
             {
                 if(resolution == Resolution.Mux)
@@ -27,10 +28,22 @@ namespace Tesses.YouTubeDownloader
 
                 return $"{TYTDManager.ResolutionToDirectory(resolution)}/{video.Id}.mp4";
             }else{
+
                  var f= await BestStreamInfo.GetBestStreams(storage,video.Id);
+
                  if(f ==null)
                     return "";
-                    
+
+                 if(f.VideoFrozen)
+                 {
+                     
+                if(resolution == Resolution.Mux)
+                    return $"{TYTDManager.ResolutionToDirectory(resolution)}/{video.Id}.mkv";
+
+                return $"{TYTDManager.ResolutionToDirectory(resolution)}/{video.Id}.mp4";
+         
+                 }
+
                       string[] exts= new string[] {"mkv",f.MuxedStreamInfo.Container.Name,f.AudioOnlyStreamInfo.Container.Name,f.VideoOnlyStreamInfo.Container.Name};
                         string ext=exts[(int)resolution];
 
@@ -87,6 +100,15 @@ namespace Tesses.YouTubeDownloader
             }
             DateTime expires=DateTime.Now.AddHours(6);
             try{
+                if(storage.VideoInfoExists(id))
+                {
+                    var video = await storage.GetVideoInfoAsync(id);
+                    if(video.VideoFrozen)
+                    {
+                        
+                        return new BestStreams() {VideoFrozen=true,MuxedStreamInfo=null,VideoOnlyStreamInfo=null,AudioOnlyStreamInfo=null};
+                    }
+                }
             var res=await storage.YoutubeClient.Videos.Streams.GetManifestAsync(id,token);
             
             var audioOnly=res.GetAudioOnlyStreams().GetWithHighestBitrate();

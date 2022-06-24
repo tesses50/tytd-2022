@@ -4,13 +4,13 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>8.0</LangVersion>
      <IsPackable>true</IsPackable>
-      <PackageId>Tesses.YouTubeDownloader</PackageId>
+      <PackageId>Tesses.YouTubeDownloader.SFTP</PackageId>
     <Author>Mike Nolan</Author>
     <Company>Tesses</Company>
-     <Version>1.1.5</Version>
-    <AssemblyVersion>1.1.5</AssemblyVersion>
-    <FileVersion>1.1.5</FileVersion>
-    <Description>A YouTube Downloader</Description>
+     <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
+    <Description>SSH.NET SFTP for Tesses.YouTubeDownloader</Description>
     <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
      <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageTags>YoutubeExplode, YouTube, YouTubeDownloader</PackageTags>
@@ -18,9 +18,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="YouTubeExplode" Version="6.1.2" />
+    <PackageReference Include="SSH.NET" Version="2020.0.2" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" />
+
+  </ItemGroup>
+
+  <ItemGroup>
+  
+    <ProjectReference Include="..\..\Tesses.YouTubeDownloader\Tesses.YouTubeDownloader.csproj" />
   </ItemGroup>
 
 </Project>

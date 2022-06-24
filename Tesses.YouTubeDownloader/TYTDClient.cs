@@ -12,10 +12,186 @@ using YoutubeExplode.Channels;
 using YoutubeExplode.Playlists;
 using System.Net.Http;
 using System.Net;
-using Espresso3389.HttpStream;
+
+using System.Diagnostics.CodeAnalysis;
+using YoutubeExplode.Utils.Extensions;
+using System.Net.Http.Headers;
 
 namespace Tesses.YouTubeDownloader
 {
+
+//From YouTubeExplode
+internal static class Helpers
+{
+     public static async ValueTask<HttpResponseMessage> HeadAsync(
+        this HttpClient http,
+        string requestUri,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Head, requestUri);
+        return await http.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken
+        );
+    }
+     public static async ValueTask<Stream> GetStreamAsync(
+        this HttpClient http,
+        string requestUri,
+        long? from = null,
+        long? to = null,
+        bool ensureSuccess = true,
+        CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        request.Headers.Range = new RangeHeaderValue(from, to);
+
+        var response = await http.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken
+        );
+
+        if (ensureSuccess)
+            response.EnsureSuccessStatusCode();
+        
+        return await response.Content.ReadAsStreamAsync();
+    }
+
+    public static async ValueTask<long?> TryGetContentLengthAsync(
+        this HttpClient http,
+        string requestUri,
+        bool ensureSuccess = true,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await http.HeadAsync(requestUri, cancellationToken);
+
+        if (ensureSuccess)
+            response.EnsureSuccessStatusCode();
+
+        return response.Content.Headers.ContentLength;
+    }
+}
+
+
+// Special abstraction that works around YouTube's stream throttling
+// and provides seeking support.
+// From YouTubeExplode
+internal class SegmentedHttpStream : Stream
+{
+    private readonly HttpClient _http;
+    private readonly string _url;
+    private readonly long? _segmentSize;
+
+    private Stream _segmentStream;
+    private long _actualPosition;
+
+    [ExcludeFromCodeCoverage]
+    public override bool CanRead => true;
+
+    [ExcludeFromCodeCoverage]
+    public override bool CanSeek => true;
+
+    [ExcludeFromCodeCoverage]
+    public override bool CanWrite => false;
+
+    public override long Length { get; }
+
+    public override long Position { get; set; }
+
+    public SegmentedHttpStream(HttpClient http, string url, long length, long? segmentSize)
+    {
+        _url = url;
+        _http = http;
+        Length = length;
+        _segmentSize = segmentSize;
+    }
+
+    private void ResetSegmentStream()
+    {
+        _segmentStream?.Dispose();
+        _segmentStream = null;
+    }
+
+    private async ValueTask<Stream> ResolveSegmentStreamAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (_segmentStream != null)
+            return _segmentStream;
+
+        var from = Position;
+
+        var to = _segmentSize != null
+            ? Position + _segmentSize - 1
+            : null;
+
+        var stream = await _http.GetStreamAsync(_url, from, to, true, cancellationToken);
+
+        return _segmentStream = stream;
+    }
+
+    public async ValueTask PreloadAsync(CancellationToken cancellationToken = default) =>
+        await ResolveSegmentStreamAsync(cancellationToken);
+
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            // Check if consumer changed position between reads
+            if (_actualPosition != Position)
+                ResetSegmentStream();
+
+            // Check if finished reading (exit condition)
+            if (Position >= Length)
+                return 0;
+
+            var stream = await ResolveSegmentStreamAsync(cancellationToken);
+            var bytesRead = await stream.ReadAsync(buffer, offset, count, cancellationToken);
+            _actualPosition = Position += bytesRead;
+
+            if (bytesRead != 0)
+                return bytesRead;
+
+            // Reached the end of the segment, try to load the next one
+            ResetSegmentStream();
+        }
+    }
+
+    [ExcludeFromCodeCoverage]
+    public override int Read(byte[] buffer, int offset, int count) =>
+        ReadAsync(buffer, offset, count).GetAwaiter().GetResult();
+
+    [ExcludeFromCodeCoverage]
+    public override long Seek(long offset, SeekOrigin origin) => Position = origin switch
+    {
+        SeekOrigin.Begin => offset,
+        SeekOrigin.Current => Position + offset,
+        SeekOrigin.End => Length + offset,
+        _ => throw new ArgumentOutOfRangeException(nameof(origin))
+    };
+
+    [ExcludeFromCodeCoverage]
+    public override void Flush() =>
+        throw new NotSupportedException();
+
+    [ExcludeFromCodeCoverage]
+    public override void SetLength(long value) =>
+        throw new NotSupportedException();
+
+    [ExcludeFromCodeCoverage]
+    public override void Write(byte[] buffer, int offset, int count) =>
+        throw new NotSupportedException();
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+
+        if (disposing)
+        {
+            ResetSegmentStream();
+        }
+    }
+}
     public class TYTDClient : TYTDBase,IDownloader
     {
         string url;
@@ -244,22 +420,84 @@ namespace Tesses.YouTubeDownloader
             return GetQueueListAsync().GetAwaiter().GetResult();
         }
 
+       
+
         public async override Task<Stream> OpenReadAsync(string path)
         {
-            
+               
              try{
-        
-             HttpStream v=new HttpStream(new Uri($"{url}api/Storage/File/{path}"),new MemoryStream(),true,32 * 1024,null,client);
-             
-            return await Task.FromResult(v);
+                var strmLen= await client.TryGetContentLengthAsync($"{url}api/Storage/File/{path}",true);
+            SegmentedHttpStream v=new SegmentedHttpStream(client,$"{url}api/Storage/File/{path}",strmLen.GetValueOrDefault(),null);
+            return v;
             }catch(Exception ex)
             {
                 _=ex;
             }
 
-           return await Task.FromResult(Stream.Null);
+           return Stream.Null;
         }
 
-       
+        public async Task AddToPersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
+        {
+             Dictionary<string,string> values=new Dictionary<string, string>
+            {
+                { "name", name},
+                { "data", JsonConvert.SerializeObject(items.ToArray())}
+            };
+            var content = new FormUrlEncodedContent(values);
+            var response = await client.PostAsync($"{url}api/v2/AddToList",content);
+            var resposeStr = await response.Content.ReadAsStringAsync();
+        }
+
+        public async Task ReplacePersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
+        {
+            //ReplaceList
+            Dictionary<string,string> values=new Dictionary<string, string>
+            {
+                { "name", name},
+                { "data", JsonConvert.SerializeObject(items.ToArray())}
+            };
+            var content = new FormUrlEncodedContent(values);
+            var response = await client.PostAsync($"{url}api/v2/ReplaceList",content);
+            var resposeStr = await response.Content.ReadAsStringAsync();
+        }
+
+        public async Task RemoveItemFromPersonalPlaylistAsync(string name, VideoId id)
+        {
+             try{
+                
+                  
+                  await client.GetStringAsync($"{url}api/v2/DeleteFromList?name={WebUtility.UrlEncode(name)}&v={id.Value}");
+            
+            }catch(Exception ex)
+            {
+                _=ex;
+            }
+        }
+
+        public async Task SetResolutionForItemInPersonalPlaylistAsync(string name, VideoId id, Resolution resolution)
+        {
+              try{
+                
+                  
+                  await client.GetStringAsync($"{url}api/v2/SetResolutionInList?name={WebUtility.UrlEncode(name)}&v={id.Value}&res={resolution.ToString()}");
+            
+            }catch(Exception ex)
+            {
+                _=ex;
+            }
+        }
+        public void DeletePersonalPlaylist(string name)
+        {
+             try{
+                
+                  
+                  client.GetStringAsync($"{url}api/v2/DeleteList?name={WebUtility.UrlEncode(name)}").GetAwaiter().GetResult();
+            
+            }catch(Exception ex)
+            {
+                _=ex;
+            }
+        }
     }
 }

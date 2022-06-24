@@ -83,10 +83,7 @@ namespace Tesses.YouTubeDownloader.DiscUtils
         {
             fileSystem.MoveFile(ConvertToDiscUtils(src),ConvertToDiscUtils(dest));
         }
-        public override async Task<long> GetLengthAsync(string path)
-        {
-           return await Task.FromResult(fileSystem.GetFileLength(ConvertToDiscUtils(path)));
-        }
+     
 
         private string ConvertToDiscUtils(string path)
         {

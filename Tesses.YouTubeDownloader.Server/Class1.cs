@@ -75,6 +75,7 @@ namespace Tesses.YouTubeDownloader.Server
             var cd = new System.Net.Mime.ContentDisposition();
             string filename = GetVideoName(name);
             cd.FileName = filename;
+            cd.DispositionType =  System.Net.Mime.DispositionTypeNames.Inline;
             
             return cd;
         }
@@ -211,7 +212,7 @@ namespace Tesses.YouTubeDownloader.Server
                     await NotFoundServer.ServerNull.GetAsync(ctx);
                     return;
                 }
-                using(var s = await baseCtl.OpenReadAsyncWithLength(file))
+                using(var s = await baseCtl.OpenReadAsync(file))
                 {
                     await ctx.SendStreamAsync(s);
                 }
@@ -326,18 +327,190 @@ namespace Tesses.YouTubeDownloader.Server
         {
                 this.Downloader=downloader;
                 
-                Add("/AddItem",AddItem);
-                Add("/AddChannel",AddChannel);
-                Add("/AddUser",AddUser);
-                Add("/AddPlaylist",AddPlaylist);
-                Add("/AddVideo",AddVideo);
-                Add("/Progress",ProgressFunc);
-                Add("/QueueList",QueueList);
-                Add("/subscribe",Subscribe);
-                Add("/resubscribe",Resubscribe);
-                Add("/unsubscribe",Unsubscribe);
-                Add("/subscriptions",Subscriptions);
+                AddBoth("/AddItem",AddItem);
+                AddBoth("/AddChannel",AddChannel);
+                AddBoth("/AddUser",AddUser);
+                AddBoth("/AddPlaylist",AddPlaylist);
+                AddBoth("/AddVideo",AddVideo);
+                AddBoth("/Progress",ProgressFunc);
+                AddBoth("/QueueList",QueueList);
+                AddBoth("/subscribe",Subscribe);
+                AddBoth("/resubscribe",Resubscribe);
+                AddBoth("/unsubscribe",Unsubscribe);
+                AddBoth("/subscriptions",Subscriptions);
+                AddBoth("/Subscribe",Subscribe);
+                AddBoth("/Resubscribe",Resubscribe);
+                AddBoth("/Unsubscribe",Unsubscribe);
+                AddBoth("/Subscriptions",Subscriptions);
+                AddBoth("/AddToList",AddToList);
+                AddBoth("/DeleteFromList",DeleteFromList);
+                Add("/ReplaceList",ReplaceList,"POST");
+                AddBoth("/DeleteList",DeleteList);
+                AddBoth("/SetResolutionInList",SetResolutionInList);
                 
+                /*
+                public async Task AddToPersonalPlaylistAsync(string name, IEnumerable<(VideoId Id, Resolution Resolution)> items)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task ReplacePersonalPlaylistAsync(string name, IEnumerable<(VideoId Id, Resolution Resolution)> items)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task RemoveItemFromPersonalPlaylistAsync(string name, VideoId id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task SetResolutionForItemInPersonalPlaylistAsync(string name, VideoId id, Resolution resolution)
+        {
+            throw new NotImplementedException();
+        }*/
+        }
+
+        private void AddBoth(string url,HttpActionAsync action)
+        {
+            Add(url,action);
+            Add(url,async(evt)=>{
+                evt.ParseBody();
+                await action(evt);
+            },"POST");
+        }
+        public async Task DeleteList(ServerContext ctx)
+        {
+            //this is for personal playlists
+              string name;
+            if(ctx.QueryParams.TryGetFirst("name",out name)){
+                Downloader.DeletePersonalPlaylist(name);
+               
+                //Downloader.AddToPersonalPlaylistAsync(name);
+
+            }
+              await ctx.SendTextAsync(
+                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }
+           public async Task ReplaceList(ServerContext ctx)
+        {
+            
+            //this is for personal playlists
+            string name;
+            if(ctx.QueryParams.TryGetFirst("name",out name)){
+                string jsonData;
+                List<ListContentItem> itemList;
+                if(ctx.QueryParams.TryGetFirst("data",out jsonData))
+                {
+                     itemList = JsonConvert.DeserializeObject<List<ListContentItem>>(jsonData);
+                    
+                     await Downloader.ReplacePersonalPlaylistAsync(name,itemList);
+
+          
+                }
+               
+                //Downloader.AddToPersonalPlaylistAsync(name);
+
+            }
+              await ctx.SendTextAsync(
+                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }
+     
+        public async Task AddToList(ServerContext ctx)
+        {
+            
+            //this is for personal playlists
+            string name;
+            if(ctx.QueryParams.TryGetFirst("name",out name)){
+                string jsonData;
+                List<ListContentItem> itemList;
+                if(ctx.Method == "POST" && ctx.QueryParams.TryGetFirst("data",out jsonData))
+                {
+                     itemList = JsonConvert.DeserializeObject<List<ListContentItem>>(jsonData);
+                    
+                }else{
+                    itemList=new List<ListContentItem>();
+                    string id;
+            
+            if(ctx.QueryParams.TryGetFirst("v",out id))
+            {
+               
+                Resolution resolution=Resolution.PreMuxed;
+                string res;
+                if(ctx.QueryParams.TryGetFirst("res",out res))
+                {
+                    if(!Enum.TryParse<Resolution>(res,out resolution))
+                    {
+                        resolution=Resolution.PreMuxed;
+                    }
+                }
+                VideoId? id1=VideoId.TryParse(id);
+                if(id1.HasValue)
+                { 
+                    itemList.Add(new ListContentItem(id1,resolution));
+                   
+                }
+            }                        
+          
+                }
+                await Downloader.AddToPersonalPlaylistAsync(name,itemList);
+
+                //Downloader.AddToPersonalPlaylistAsync(name);
+
+            }
+              await ctx.SendTextAsync(
+                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }
+        public async Task DeleteFromList(ServerContext ctx)
+        {
+            //this is for personal playlists
+            string name;
+            if(ctx.QueryParams.TryGetFirst("name",out name)){
+            string id;
+            
+            if(ctx.QueryParams.TryGetFirst("v",out id))
+            {
+                VideoId? id1=VideoId.TryParse(id);
+                if(id1.HasValue)
+                { 
+                    await Downloader.RemoveItemFromPersonalPlaylistAsync(name,id1.Value);
+                }
+            }
+            }
+              await ctx.SendTextAsync(
+                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+        }
+         public async Task SetResolutionInList(ServerContext ctx)
+        {
+            //this is for personal playlists
+            string name;
+            if(ctx.QueryParams.TryGetFirst("name",out name)){
+            string id;
+            
+            if(ctx.QueryParams.TryGetFirst("v",out id))
+            {
+                 Resolution resolution=Resolution.PreMuxed;
+                string res;
+                if(ctx.QueryParams.TryGetFirst("res",out res))
+                {
+                    if(!Enum.TryParse<Resolution>(res,out resolution))
+                    {
+                        resolution=Resolution.PreMuxed;
+                    }
+                }
+                VideoId? id1=VideoId.TryParse(id);
+                if(id1.HasValue)
+                { 
+                    await Downloader.SetResolutionForItemInPersonalPlaylistAsync(name,id1.Value,resolution);
+                }
+            }
+            }
+              await ctx.SendTextAsync(
+                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
         }
         public async Task Subscriptions(ServerContext ctx)
         {
@@ -351,7 +524,9 @@ namespace Tesses.YouTubeDownloader.Server
                      
                  
             }
-             
+               await ctx.SendTextAsync(
+                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
         }
         public async Task Resubscribe(ServerContext ctx)
                 {
@@ -373,7 +548,7 @@ namespace Tesses.YouTubeDownloader.Server
                         }
                     }
                     
-                     ChannelId? cid=ChannelId.TryParse(WebUtility.UrlDecode(id));
+                     ChannelId? cid=ChannelId.TryParse(id);
 
                      if(cid.HasValue)
                      {
@@ -399,7 +574,7 @@ namespace Tesses.YouTubeDownloader.Server
                     
                     
                     
-                     ChannelId? cid=ChannelId.TryParse(WebUtility.UrlDecode(id));
+                     ChannelId? cid=ChannelId.TryParse(id);
 
                      if(cid.HasValue)
                      {
@@ -441,14 +616,14 @@ namespace Tesses.YouTubeDownloader.Server
                         }
                     }
                     
-                     ChannelId? cid=ChannelId.TryParse(WebUtility.UrlDecode(id));
+                     ChannelId? cid=ChannelId.TryParse(id);
 
                      if(cid.HasValue)
                      {
                         
                          await storage.SubscribeAsync(cid.Value,getinfo,conf);
                      }else{
-                        UserName? uname=UserName.TryParse(WebUtility.UrlDecode(id));
+                        UserName? uname=UserName.TryParse(id);
                         await storage.SubscribeAsync(uname.Value,conf);
 
                      }
@@ -473,6 +648,7 @@ namespace Tesses.YouTubeDownloader.Server
             
             if(ctx.QueryParams.TryGetFirst("v",out id))
             {
+               
                 Resolution resolution=Resolution.PreMuxed;
                 string res;
                 if(ctx.QueryParams.TryGetFirst("res",out res))

@@ -18,6 +18,7 @@ namespace Tesses.YouTubeDownloader
         public IDownloader Downloader {get;set;}
 
         private ITYTDBase _base=null;
+        
         public ITYTDBase Storage {get {return _base;} set{_base=value;
         var v = value as IStorage;
         if(v != null)
@@ -32,6 +33,7 @@ namespace Tesses.YouTubeDownloader
                 _storage.VideoFinished -= _EVT_VFIN;
                 _storage.VideoProgress -= _EVT_VPROG;
                 _storage.VideoStarted -= _EVT_VSTAR;
+                _storage.Error -= _EVT_ERR;
             }
             _storage=storage;
             if(storage != null)
@@ -41,6 +43,7 @@ namespace Tesses.YouTubeDownloader
                 _storage.VideoFinished += _EVT_VFIN;
                 _storage.VideoProgress += _EVT_VPROG;
                 _storage.VideoStarted += _EVT_VSTAR;
+                _storage.Error += _EVT_ERR;
             }
 
         }
@@ -63,6 +66,10 @@ namespace Tesses.YouTubeDownloader
         private void _EVT_BELL(object sender,BellEventArgs evt)
         {
             Bell?.Invoke(this,evt);
+        }
+        private void _EVT_ERR(object sender,TYTDErrorEventArgs evt)
+        {
+            Error?.Invoke(this,evt);
         }
         IStorage _storage=null;
 
@@ -125,7 +132,7 @@ namespace Tesses.YouTubeDownloader
         public event EventHandler<VideoProgressEventArgs> VideoProgress;
         public event EventHandler<VideoFinishedEventArgs> VideoFinished;
 
-       
+        public event EventHandler<TYTDErrorEventArgs> Error;
 
         public async Task StorageAsStorageAsync(Func<IStorage,Task> callback)
         {
@@ -201,21 +208,25 @@ namespace Tesses.YouTubeDownloader
 
         public async Task<Stream> OpenReadAsync(string path)
         {
+            if(Storage ==null) return Stream.Null;
             return await Storage.OpenReadAsync(path);
         }
 
         public async Task<bool> FileExistsAsync(string path)
         {
+             if(Storage ==null) return false;
             return await Storage.FileExistsAsync(path);
         }
 
         public async Task<bool> DirectoryExistsAsync(string path)
         {
+             if(Storage ==null) return false;
             return await Storage.DirectoryExistsAsync(path);
         }
 
         public async IAsyncEnumerable<string> EnumerateFilesAsync(string path)
         {
+            if(Storage == null) yield break;
             await foreach(var item in Storage.EnumerateFilesAsync(path))
             {
                 yield return item;
@@ -224,6 +235,7 @@ namespace Tesses.YouTubeDownloader
 
         public async IAsyncEnumerable<string> EnumerateDirectoriesAsync(string path)
         {
+            if(Storage == null) yield break;
             await foreach(var item in Storage.EnumerateDirectoriesAsync(path))
             {
                 yield return item;
@@ -315,9 +327,9 @@ namespace Tesses.YouTubeDownloader
             });
         }
 
-        public async IAsyncEnumerable<(VideoId Id, Resolution Resolution)> GetPersonalPlaylistContentsAsync(string name)
+        public async IAsyncEnumerable<ListContentItem> GetPersonalPlaylistContentsAsync(string name)
         {
-            IAsyncEnumerable<(VideoId Id,Resolution Resolution)> items=null;
+            IAsyncEnumerable<ListContentItem> items=null;
             StorageAsStorage((e)=>{
                 items=e.GetPersonalPlaylistContentsAsync(name);
 
@@ -331,31 +343,37 @@ namespace Tesses.YouTubeDownloader
 
         public async Task AddVideoAsync(VideoId id, Resolution resolution = Resolution.PreMuxed)
         {
+            if(Downloader != null)
             await Downloader.AddVideoAsync(id,resolution);
         }
 
         public async Task AddPlaylistAsync(PlaylistId id, Resolution resolution = Resolution.PreMuxed)
         {
+            if(Downloader != null)
             await Downloader.AddPlaylistAsync(id,resolution);
         }
 
         public async Task AddChannelAsync(ChannelId id, Resolution resolution = Resolution.PreMuxed)
         {
+            if(Downloader != null)
             await Downloader.AddChannelAsync(id,resolution);
         }
 
         public async Task AddUserAsync(UserName userName, Resolution resolution = Resolution.PreMuxed)
         {
+            if(Downloader != null)
             await Downloader.AddUserAsync(userName,resolution);
         }
 
         public IReadOnlyList<(SavedVideo Video, Resolution Resolution)> GetQueueList()
         {
+            if(Downloader == null) return new List<(SavedVideo Video,Resolution Resolution)>();
             return Downloader.GetQueueList();
         }
 
         public SavedVideoProgress GetProgress()
         {
+            if(Downloader == null)return new SavedVideoProgress();
             return Downloader.GetProgress();
         }
 
@@ -414,23 +432,22 @@ namespace Tesses.YouTubeDownloader
 
         public async Task<(string Path, bool Delete)> GetRealUrlOrPathAsync(string path)
         {
+            if(Storage == null) return ("",false);
             return await Storage.GetRealUrlOrPathAsync(path);
                      
         }
 
-        public async Task<long> GetLengthAsync(string path)
-        {
-           return await Storage.GetLengthAsync(path);
-            
-        }
+       
 
         public bool FileExists(string path)
         {
+            if(Storage == null) return false;
             return Storage.FileExists(path);
         }
 
         public async IAsyncEnumerable<string> GetVideoIdsAsync()
         {
+            if(Storage == null) yield break;
             await foreach(var id in Storage.GetVideoIdsAsync())
             {
                 yield return await Task.FromResult(id);
@@ -439,11 +456,13 @@ namespace Tesses.YouTubeDownloader
 
         public async Task<SavedVideo> GetVideoInfoAsync(VideoId id)
         {
+            if(Storage == null) return new SavedVideo();
             return await Storage.GetVideoInfoAsync(id);
         }
 
         public async IAsyncEnumerable<SavedVideo> GetVideosAsync()
         {
+             if(Storage ==null) yield break;
             await foreach(var vid in Storage.GetVideosAsync())
             {
                 yield return await Task.FromResult(vid);
@@ -452,6 +471,7 @@ namespace Tesses.YouTubeDownloader
 
         public async IAsyncEnumerable<SavedVideoLegacy> GetLegacyVideosAsync()
         {
+             if(Storage ==null) yield break;
             await foreach(var item in Storage.GetLegacyVideosAsync())
             {
                 yield return await Task.FromResult(item);
@@ -460,11 +480,13 @@ namespace Tesses.YouTubeDownloader
 
         public async Task<SavedVideoLegacy> GetLegacyVideoInfoAsync(VideoId id)
         {
+            if(Storage == null) return new SavedVideoLegacy();
             return await Storage.GetLegacyVideoInfoAsync(id);
         }
 
         public async IAsyncEnumerable<SavedPlaylist> GetPlaylistsAsync()
         {
+             if(Storage ==null) yield break;
             await foreach(var item in Storage.GetPlaylistsAsync())
             {
                 yield return await Task.FromResult(item);
@@ -473,11 +495,13 @@ namespace Tesses.YouTubeDownloader
 
         public async Task<byte[]> ReadAllBytesAsync(string path, CancellationToken token = default)
         {
+             if(Storage ==null) return new byte[0];
             return await Storage.ReadAllBytesAsync(path,token);
         }
 
         public async IAsyncEnumerable<string> GetPlaylistIdsAsync()
         {
+             if(Storage ==null) yield break;
             await foreach(var item in Storage.GetPlaylistIdsAsync())
             {
                 yield return await Task.FromResult(item);
@@ -486,6 +510,7 @@ namespace Tesses.YouTubeDownloader
 
         public async IAsyncEnumerable<string> GetChannelIdsAsync()
         {
+             if(Storage ==null) yield break;
             await foreach(var item in Storage.GetChannelIdsAsync())
             {
                 yield return await Task.FromResult(item);
@@ -494,6 +519,7 @@ namespace Tesses.YouTubeDownloader
 
         public async IAsyncEnumerable<VideoId> GetYouTubeExplodeVideoIdsAsync()
         {
+             if(Storage ==null) yield break;
             await foreach(var item in Storage.GetYouTubeExplodeVideoIdsAsync())
             {
                 yield return await Task.FromResult(item);
@@ -502,11 +528,13 @@ namespace Tesses.YouTubeDownloader
 
         public async Task<SavedChannel> GetChannelInfoAsync(ChannelId id)
         {
+             if(Storage ==null) return new SavedChannel();
             return await Storage.GetChannelInfoAsync(id);
         }
 
         public async IAsyncEnumerable<SavedChannel> GetChannelsAsync()
         {
+             if(Storage ==null) yield break;
             await foreach(var item in Storage.GetChannelsAsync())
             {
                 yield return await Task.FromResult(item);
@@ -515,49 +543,60 @@ namespace Tesses.YouTubeDownloader
 
         public bool PlaylistInfoExists(PlaylistId id)
         {
+             if(Storage ==null) return false;
             return Storage.PlaylistInfoExists(id);
         }
 
         public bool VideoInfoExists(VideoId id)
         {
+             if(Storage ==null) return false;
            return Storage.VideoInfoExists(id);
         }
 
         public bool ChannelInfoExists(ChannelId id)
         {
+             if(Storage ==null) return false;
             return Storage.ChannelInfoExists(id);
         }
 
         public async Task<SavedPlaylist> GetPlaylistInfoAsync(PlaylistId id)
         {
+             if(Storage ==null) return new SavedPlaylist();
             return await Storage.GetPlaylistInfoAsync(id);
         }
 
-        public Task<string> ReadAllTextAsync(string file)
+        public async Task<string> ReadAllTextAsync(string file)
         {
-            return Storage.ReadAllTextAsync(file);
+             if(Storage ==null) return "";
+            return await Storage.ReadAllTextAsync(file);
         }
 
         public bool DirectoryExists(string path)
         {
+             if(Storage ==null) return false;
             return Storage.DirectoryExists(path);
         }
 
         public IEnumerable<string> EnumerateFiles(string path)
         {
-            return Storage.EnumerateFiles(path);
+            if(Storage ==null) yield break;
+            foreach(var item in Storage.EnumerateFiles(path))
+            {
+                yield return item;
+            }
+            
         }
 
         public IEnumerable<string> EnumerateDirectories(string path)
         {
-            return Storage.EnumerateDirectories(path);
+             if(Storage ==null) yield break;
+            foreach(var item in Storage.EnumerateDirectories(path))
+            {
+                yield return item;
+            }
         }
 
-        public async Task<Stream> OpenReadAsyncWithLength(string path)
-        {
-           return await Storage.OpenReadAsyncWithLength(path);
-        }
-
+      
         public IReadOnlyList<Subscription> GetLoadedSubscriptions()
         {
             IReadOnlyList<Subscription> subs=new List<Subscription>();
@@ -578,6 +617,47 @@ namespace Tesses.YouTubeDownloader
         {
             StorageAsStorage((e)=>{
                 e.StartLoop(token);
+            });
+        }
+
+        public async Task AddToPersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
+        {
+            await StorageAsStorageAsync(async(e)=>{
+                await e.AddToPersonalPlaylistAsync(name,items);
+            });
+        }
+
+        public async Task ReplacePersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
+        {
+            await StorageAsStorageAsync(async(e)=>{
+                await e.ReplacePersonalPlaylistAsync(name,items);
+            });
+        }
+
+        public async Task RemoveItemFromPersonalPlaylistAsync(string name, VideoId id)
+        {
+            await StorageAsStorageAsync(async(e)=>{
+                await e.RemoveItemFromPersonalPlaylistAsync(name,id);
+            });
+        }
+
+        public async Task SetResolutionForItemInPersonalPlaylistAsync(string name, VideoId id, Resolution resolution)
+        {
+            await StorageAsStorageAsync(async(e)=>{
+                await e.SetResolutionForItemInPersonalPlaylistAsync(name,id,resolution);
+            });
+        }
+
+        public bool PersonalPlaylistExists(string name)
+        {
+            if(Storage ==null) return false;
+            return Storage.PersonalPlaylistExists(name);
+        }
+
+        public void DeletePersonalPlaylist(string name)
+        {
+            StorageAsStorage((e)=>{
+                e.DeletePersonalPlaylist(name);
             });
         }
     }

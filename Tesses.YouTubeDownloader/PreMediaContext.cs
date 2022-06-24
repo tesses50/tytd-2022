@@ -40,9 +40,15 @@ namespace Tesses.YouTubeDownloader
               string path=$"Channel/{Id.Value}.json";
               if(await storage.Continue(path))
               {
+                  try{
                   channel=await DownloadThumbnails(storage,await storage.YoutubeClient.Channels.GetAsync(Id.Value));
                   //channel=new SavedChannel(i);
                   await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(channel));
+                  }catch(Exception ex)
+                  {
+                      await storage.GetLogger().WriteAsync(ex);
+                      return null;
+                  }
                   return channel;
               }else{
                   var j=JsonConvert.DeserializeObject<SavedChannel>(await storage.ReadAllTextAsync(path));
@@ -114,6 +120,8 @@ namespace Tesses.YouTubeDownloader
     
             string path=$"Playlist/{Id}.json"; 
             List<IVideo> videos=new List<IVideo>();
+            try{
+            
             await foreach(var vid in storage.YoutubeClient.Playlists.GetVideosAsync(Id))
             {
                 videos.Add(vid);
@@ -127,6 +135,10 @@ namespace Tesses.YouTubeDownloader
                 
             }
             await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(p));
+            }catch(Exception ex)
+            {
+                await storage.GetLogger().WriteAsync(ex);
+            }
             if(Resolution == Resolution.NoDownload) return;
             foreach(var item in videos)
             {
@@ -161,7 +173,8 @@ namespace Tesses.YouTubeDownloader
                     await video.DownloadThumbnails(storage);
                 }catch(Exception ex)
                 {
-                    _=ex;
+                    
+                    await storage.GetLogger().WriteAsync(ex,Id);
                     return;
                 }
                 

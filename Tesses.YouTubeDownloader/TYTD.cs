@@ -164,6 +164,10 @@ namespace Tesses.YouTubeDownloader
             });
            thread1.Start();
         }
+        internal void ThrowError(TYTDErrorEventArgs e)
+        {
+            Error?.Invoke(this,e);
+        }
         public async Task WriteAllTextAsync(string path,string data)
         {
             using(var dstStrm= await CreateAsync(path))
@@ -173,6 +177,61 @@ namespace Tesses.YouTubeDownloader
                     await sw.WriteAsync(data);
                 }
             }
+        }
+
+        public async Task AddToPersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
+        {
+             List<ListContentItem> items0=new List<ListContentItem>();
+            await foreach(var item in GetPersonalPlaylistContentsAsync(name))
+            {
+                items0.Add(item);
+            }
+            items0.AddRange(items);
+            await WriteAllTextAsync($"PersonalPlaylist/{name}.json",JsonConvert.SerializeObject(items0));
+            
+        }
+
+        public async Task ReplacePersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
+        {
+            
+            await WriteAllTextAsync($"PersonalPlaylist/{name}.json",JsonConvert.SerializeObject(items.ToList()));
+            
+        }
+        public void DeletePersonalPlaylist(string name)
+        {
+            DeleteFile($"PersonalPlaylist/{name}.json");
+        }
+
+        public async Task RemoveItemFromPersonalPlaylistAsync(string name, VideoId id)
+        {
+              List<ListContentItem> items0=new List<ListContentItem>();
+            await foreach(var item in GetPersonalPlaylistContentsAsync(name))
+            {
+                if(item.Id != id)
+                {
+                    items0.Add(item);
+                }
+            }
+           
+            await WriteAllTextAsync($"PersonalPlaylist/{name}.json",JsonConvert.SerializeObject(items0));
+            
+        }
+
+        public async Task SetResolutionForItemInPersonalPlaylistAsync(string name, VideoId id, Resolution resolution)
+        {
+             List<ListContentItem> items0=new List<ListContentItem>();
+            await foreach(var item in GetPersonalPlaylistContentsAsync(name))
+            {
+                if(item.Id != id)
+                {
+                    items0.Add(item);
+                }else{
+                    items0.Add(new ListContentItem(item.Id,resolution));
+                }
+            }
+           
+            await WriteAllTextAsync($"PersonalPlaylist/{name}.json",JsonConvert.SerializeObject(items0));
+            
         }
     }
 }
