@@ -50,17 +50,23 @@ namespace Tesses.YouTubeDownloader
         public abstract void MoveDirectory(string src,string dest);
         public abstract void DeleteFile(string file);
         public abstract void DeleteDirectory(string dir,bool recursive=false);
-       
 
-        public async Task WriteVideoInfoAsync(SavedVideo info)
+        public virtual async Task WriteBestStreamInfoAsync(VideoId id,BestStreamInfo.BestStreamsSerialized serialized)
         {
-            string file = $"Info/{info.Id}.json";
+            await WriteAllTextAsync($"StreamInfo/{id.Value}.json",JsonConvert.SerializeObject(serialized));
+            
+        }
+
+        public virtual async Task WriteVideoInfoAsync(SavedVideo info)
+        {
+            
+            string file = info.DownloadFrom.StartsWith("NormalDownload,Length=") ? $"FileInfo/{B64.Base64UrlEncodes(info.Id)}.json" : $"Info/{info.Id}.json";
             if(!FileExists(file))
             {
                await WriteAllTextAsync(file,JsonConvert.SerializeObject(info));
             }
         }
-        public async Task WritePlaylistInfoAsync(SavedPlaylist info)
+        public virtual async Task WritePlaylistInfoAsync(SavedPlaylist info)
         {
              string file = $"Playlist/{info.Id}.json";
             if(!FileExists(file))
@@ -68,7 +74,7 @@ namespace Tesses.YouTubeDownloader
                await WriteAllTextAsync(file,JsonConvert.SerializeObject(info));
             }
         }
-        public async Task WriteChannelInfoAsync(SavedChannel info)
+        public virtual async Task WriteChannelInfoAsync(SavedChannel info)
         {
              string file = $"Channel/{info.Id}.json";
             if(!FileExists(file))
@@ -108,6 +114,14 @@ namespace Tesses.YouTubeDownloader
             lock(Temporary)
             {
                 Temporary.Add(new VideoMediaContext(videoId,res));
+            }
+            await Task.FromResult(0);
+        }
+        public async Task AddFileAsync(string url,bool download=true)
+        {
+            lock(Temporary)
+            {
+                Temporary.Add(new NormalDownloadMediaContext(url,download));
             }
             await Task.FromResult(0);
         }
@@ -151,6 +165,9 @@ namespace Tesses.YouTubeDownloader
             CreateDirectoryIfNotExist("Thumbnails");
             CreateDirectoryIfNotExist("config");
             CreateDirectoryIfNotExist("config/logs");
+            CreateDirectoryIfNotExist("FileInfo");
+            CreateDirectoryIfNotExist("Download");
+            CreateDirectoryIfNotExist("StreamInfo");
         }
         public void StartLoop(CancellationToken token = default(CancellationToken))
         {
@@ -179,7 +196,7 @@ namespace Tesses.YouTubeDownloader
             }
         }
 
-        public async Task AddToPersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
+        public virtual async Task AddToPersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
         {
              List<ListContentItem> items0=new List<ListContentItem>();
             await foreach(var item in GetPersonalPlaylistContentsAsync(name))
@@ -191,18 +208,18 @@ namespace Tesses.YouTubeDownloader
             
         }
 
-        public async Task ReplacePersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
+        public virtual async Task ReplacePersonalPlaylistAsync(string name, IEnumerable<ListContentItem> items)
         {
             
             await WriteAllTextAsync($"PersonalPlaylist/{name}.json",JsonConvert.SerializeObject(items.ToList()));
             
         }
-        public void DeletePersonalPlaylist(string name)
+        public virtual void DeletePersonalPlaylist(string name)
         {
             DeleteFile($"PersonalPlaylist/{name}.json");
         }
 
-        public async Task RemoveItemFromPersonalPlaylistAsync(string name, VideoId id)
+        public virtual async Task RemoveItemFromPersonalPlaylistAsync(string name, VideoId id)
         {
               List<ListContentItem> items0=new List<ListContentItem>();
             await foreach(var item in GetPersonalPlaylistContentsAsync(name))
@@ -217,7 +234,7 @@ namespace Tesses.YouTubeDownloader
             
         }
 
-        public async Task SetResolutionForItemInPersonalPlaylistAsync(string name, VideoId id, Resolution resolution)
+        public virtual async Task SetResolutionForItemInPersonalPlaylistAsync(string name, VideoId id, Resolution resolution)
         {
              List<ListContentItem> items0=new List<ListContentItem>();
             await foreach(var item in GetPersonalPlaylistContentsAsync(name))

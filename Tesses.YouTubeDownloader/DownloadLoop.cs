@@ -112,6 +112,8 @@ namespace Tesses.YouTubeDownloader
             
         }
 
+        
+
         public async Task<SavedVideo> GetSavedVideoAsync(VideoId id)
         {
             VideoMediaContext context=new VideoMediaContext(id,Resolution.PreMuxed);
@@ -128,6 +130,8 @@ namespace Tesses.YouTubeDownloader
         private async Task DownloadVideoAsync(SavedVideo video, Resolution resolution, CancellationToken token=default(CancellationToken),IProgress<double> progress=null,bool report=true)
         {
             try{
+                if(video.DownloadFrom == "YouTube")
+                {
             switch (resolution)
             {
                 case Resolution.Mux:
@@ -143,12 +147,103 @@ namespace Tesses.YouTubeDownloader
                     await DownloadVideoOnlyAsync(video,token,progress,report);
                     break;
             }
+            }else if(video.DownloadFrom.StartsWith("NormalDownload,Length="))
+            {
+                await DownloadFileAsync(video,token,progress,report);
+            }
             }catch(Exception ex)
             {
-                await GetLogger().WriteAsync(ex,video.Id);
+                VideoId? id=VideoId.TryParse(video.Id);
+                if(id.HasValue){
+                await GetLogger().WriteAsync(ex,id.Value);
+                }else{
+                    await GetLogger().WriteAsync(ex);
+                }
             }
 
         }
+
+        private async Task DownloadFileAsync(SavedVideo video, CancellationToken token, IProgress<double> progress, bool report)
+        {
+            string incomplete_file_path = $"Download/{B64.Base64UrlEncodes(video.Id)}-incomplete.part";
+            string file_path = $"Download/{B64.Base64UrlEncodes(video.Id)}.bin";
+            string url = video.Id;
+            bool canSeek=false;
+            long length=0;
+
+            foreach(var kvp in video.DownloadFrom.Split(',').Select<string,KeyValuePair<string,string>>((e)=>{
+                if(!e.Contains('=')) return new KeyValuePair<string, string>("","");
+                string[] keyVP = e.Split(new char[]{'='},2);
+                
+
+                return new KeyValuePair<string, string>(keyVP[0],keyVP[1]);}))
+            {
+                switch(kvp.Key)
+                {
+                    case "CanSeek":
+                        bool.TryParse(kvp.Value,out canSeek);
+                        break;
+                    case "Length":
+                        long len;
+                        if(long.TryParse(kvp.Value,out len))
+                        {
+                            length=len;
+                        }
+                        break;
+                }
+            }
+            await ReportStartVideo(video,Resolution.PreMuxed,length);
+            Func<long,Task<Stream>> openDownload =  async(e)=>{
+                HttpRequestMessage msg=new HttpRequestMessage(HttpMethod.Get,url);
+                if(e > 0)
+                {
+                    msg.Headers.Range.Ranges.Add(new System.Net.Http.Headers.RangeItemHeaderValue(e,null));
+                }
+                
+                var res=await HttpClient.SendAsync(msg);
+                return await res.Content.ReadAsStreamAsync();
+            };
+            
+            if(await Continue(file_path))
+            {
+                bool deleteAndRestart=false;
+                
+                using(var file = await OpenOrCreateAsync(incomplete_file_path))
+                {
+                    if(file.Length > 0 && !canSeek)
+                    {
+                        deleteAndRestart = true;
+                    }
+                    if(!deleteAndRestart)
+                    {
+                        Stream strm=await openDownload(file.Length);
+                        bool res=await CopyStreamAsync(strm,file,0,length,4096,progress,token);
+                         if(res)
+                            {
+                                RenameFile(incomplete_file_path,file_path);
+                                if(report)
+                                    await  ReportEndVideo(video, Resolution.PreMuxed);
+                            }
+                    }
+                }
+                if(deleteAndRestart){
+                DeleteFile(incomplete_file_path);
+                    using(var file = await OpenOrCreateAsync(incomplete_file_path))
+                    {
+                        Stream strm=await openDownload(0);
+                        bool res=await CopyStreamAsync(strm,file,0,length,4096,progress,token);
+                        if(res)
+                            {
+                                RenameFile(incomplete_file_path,file_path);
+                                if(report)
+                                    await  ReportEndVideo(video, Resolution.PreMuxed);
+                            }
+                    }
+                }
+
+            }
+        }
+
         public async Task<bool> Continue(string path)
         {
    
@@ -282,7 +377,7 @@ namespace Tesses.YouTubeDownloader
                 }
                 curPos+=read;
                 await dest.WriteAsync(buffer,0,read);
-                if(progress != null)
+                if(progress != null && len != 0)
                 {
                     progress.Report(curPos / len);
                 }

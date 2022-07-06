@@ -32,7 +32,7 @@ namespace Tesses.YouTubeDownloader
                  var f= await BestStreamInfo.GetBestStreams(storage,video.Id);
 
                  if(f ==null)
-                    return "";
+                    return resolution == Resolution.NoDownload ? "" : resolution == Resolution.Mux ? $"Mux/{video.Id}.mkv" : $"{TYTDManager.ResolutionToDirectory(resolution)}/{video.Id}.mp4";
 
                  if(f.VideoFrozen)
                  {
@@ -61,13 +61,12 @@ namespace Tesses.YouTubeDownloader
         public static async Task<BestStreams> GetBestStreams(ITYTDBase storage,VideoId id)
         {
             //Console.WriteLine("IN FUNC");
-            if(storage.DirectoryExists("StreamInfo"))
-            {
+            
                 //Console.WriteLine("DIR");
-                if(storage.FileExists($"StreamInfo/{id.Value}.json"))
+                if(storage.BestStreamInfoExists(id))
                 {
                     //Console.WriteLine("STREAMS");
-                    BestStreamsSerialized serialization=JsonConvert.DeserializeObject<BestStreamsSerialized>(await storage.ReadAllTextAsync($"StreamInfo/{id.Value}.json"));
+                    BestStreamsSerialized serialization=await storage.GetBestStreamInfoAsync(id);
                     
                         BestStreams streams=new BestStreams();
                         streams.VideoOnlyStreamInfo = new BestStreamInfo(serialization.VideoOnly);
@@ -76,16 +75,16 @@ namespace Tesses.YouTubeDownloader
                         return streams;
                     
                 }
-            }
+            
             return null;
         }
         public static async Task<BestStreams> GetBestStreams(IStorage storage,VideoId id,CancellationToken token=default(CancellationToken),bool expire_check=true)
         {
-            if(storage.DirectoryExists("StreamInfo"))
-            {
-                if(storage.FileExists($"StreamInfo/{id.Value}.json"))
+            
+            
+                if(storage.BestStreamInfoExists(id))
                 {
-                    BestStreamsSerialized serialization=JsonConvert.DeserializeObject<BestStreamsSerialized>(await storage.ReadAllTextAsync($"StreamInfo/{id.Value}.json"));
+                    BestStreamsSerialized serialization=await storage.GetBestStreamInfoAsync(id);
                     if(DateTime.Now < serialization.Expires || !expire_check)
                     {
                         BestStreams streams=new BestStreams();
@@ -95,9 +94,7 @@ namespace Tesses.YouTubeDownloader
                         return streams;
                     }
                 }
-            }else{
-                storage.CreateDirectory("StreamInfo");
-            }
+            
             DateTime expires=DateTime.Now.AddHours(6);
             try{
                 if(storage.VideoInfoExists(id))
@@ -126,8 +123,7 @@ namespace Tesses.YouTubeDownloader
             streams1.MuxedStreamInfo =new BestStreamInfo();
             streams1.MuxedStreamInfo.SetInfo(muxed);
             serialized.Muxed = streams1.MuxedStreamInfo.Serialization;
-
-            await storage.WriteAllTextAsync($"StreamInfo/{id.Value}.json",JsonConvert.SerializeObject(serialized));
+            await storage.WriteBestStreamInfoAsync(id,serialized);
             return streams1;
             }catch(YoutubeExplodeException ex)
             {
@@ -135,7 +131,7 @@ namespace Tesses.YouTubeDownloader
                 return null;
             }
         } 
-         private class BestStreamsSerialized
+         public class BestStreamsSerialized
         {
             public DateTime Expires {get;set;}
             public BestStreamInfoSerialization VideoOnly {get;set;}
@@ -202,7 +198,7 @@ namespace Tesses.YouTubeDownloader
             }
         }
         
-        internal class BestStreamInfoSerialization
+        public class BestStreamInfoSerialization
         {
             public string AudioCodec {get;set;}
             public int FrameRate {get;set;}

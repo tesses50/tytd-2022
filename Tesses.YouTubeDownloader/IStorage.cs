@@ -15,7 +15,7 @@ namespace Tesses.YouTubeDownloader
 {
     public interface IStorage : IWritable, IDownloader, ITYTDBase
     { 
-     
+        Task WriteBestStreamInfoAsync(VideoId id,BestStreamInfo.BestStreamsSerialized serialized);
         Task<bool> MuxVideosAsync(SavedVideo video,string videoSrc,string audioSrc,string videoDest,IProgress<double> progress=null,CancellationToken token=default(CancellationToken));
         Task<bool> Continue(string path);
         Task WriteVideoInfoAsync(SavedVideo channel);

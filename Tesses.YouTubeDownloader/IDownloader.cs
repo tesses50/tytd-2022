@@ -17,7 +17,7 @@ namespace Tesses.YouTubeDownloader
         Task AddChannelAsync(ChannelId id,Resolution resolution=Resolution.PreMuxed);
 
         Task AddUserAsync(UserName userName,Resolution resolution=Resolution.PreMuxed);
-
+        Task AddFileAsync(string url,bool download=true);
         IReadOnlyList<(SavedVideo Video,Resolution Resolution)> GetQueueList();
         SavedVideoProgress GetProgress();
         IAsyncEnumerable<Subscription> GetSubscriptionsAsync();
@@ -26,5 +26,6 @@ namespace Tesses.YouTubeDownloader
         Task SubscribeAsync(UserName name,ChannelBellInfo info=ChannelBellInfo.NotifyAndDownload);
         Task ResubscribeAsync(ChannelId id,ChannelBellInfo info=ChannelBellInfo.NotifyAndDownload);
         void DeletePersonalPlaylist(string name);
+
     }
 }

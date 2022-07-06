@@ -25,6 +25,79 @@ namespace Tesses.YouTubeDownloader.Server
         public override async Task GetAsync(ServerContext ctx)
         {
             string path=ctx.UrlAndQuery;
+
+            if(path.StartsWith("/AddPlaylistRes/"))
+            {     string id_res=path.Substring(16);
+                 string[] id_res_split = id_res.Split(new char[] {'/'},2,StringSplitOptions.RemoveEmptyEntries);
+                 if(id_res_split.Length ==2)
+                 {
+                     int num;
+                     if(int.TryParse(id_res_split[0],out num))
+                     {
+                         if(num < 0) num=1;
+                         if(num > 3) num=1;
+
+                         await downloader1.AddPlaylistAsync(id_res_split[1],(Resolution)num);
+                     }
+                 }
+            }
+             if(path.StartsWith("/AddChannelRes/"))
+            {     string id_res=path.Substring(15);
+                 string[] id_res_split = id_res.Split(new char[] {'/'},2,StringSplitOptions.RemoveEmptyEntries);
+                 if(id_res_split.Length ==2)
+                 {
+                     int num;
+                     if(int.TryParse(id_res_split[0],out num))
+                     {
+                         if(num < 0) num=1;
+                         if(num > 3) num=1;
+
+                         await downloader1.AddChannelAsync(id_res_split[1],(Resolution)num);
+                     }
+                 }
+            }
+            
+            if(path.StartsWith("/AddChannel/"))
+            {
+                 await downloader1.AddChannelAsync(path.Substring(12),Resolution.PreMuxed);
+                     
+            }
+            if(path.StartsWith("/AddPlaylist/"))
+            {
+                 await downloader1.AddPlaylistAsync(path.Substring(13),Resolution.PreMuxed);
+                     
+            }
+            if(path.StartsWith("/AddVideoRes/"))
+            {     string id_res=path.Substring(13);
+                 string[] id_res_split = id_res.Split(new char[] {'/'},2,StringSplitOptions.RemoveEmptyEntries);
+                 if(id_res_split.Length ==2)
+                 {
+                     int num;
+                     if(int.TryParse(id_res_split[0],out num))
+                     {
+                         if(num < 0) num=1;
+                         if(num > 3) num=1;
+
+                         await downloader1.AddVideoAsync(id_res_split[1],(Resolution)num);
+                     }
+                 }
+            }
+
+            if(path.StartsWith("/AddVideo/"))
+            {
+                      //string id_res=path.Substring(12);
+                 //string[] id_res_split = id_res.Split(new char[] {'/'},2,StringSplitOptions.RemoveEmptyEntries);
+                 //if(id_res_split.Length ==2)
+                 //{
+                     
+                         await downloader1.AddVideoAsync(path.Substring(10),Resolution.PreMuxed);
+                     
+                // }
+                // await ctx.SendTextAsync(
+               // $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            //);
+            await ctx.SendRedirectAsync("/");
+            }
             if(path.StartsWith("/AddItemRes/"))
             {
                        string id_res=path.Substring(12);
@@ -43,7 +116,7 @@ namespace Tesses.YouTubeDownloader.Server
                 // await ctx.SendTextAsync(
                // $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
             //);
-            await ctx.SendRedirectAsync("/");
+            
             }
              if(path.StartsWith("/AddItem/"))
             {
@@ -58,8 +131,59 @@ namespace Tesses.YouTubeDownloader.Server
                 // await ctx.SendTextAsync(
                // $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
             //);
-            await ctx.SendRedirectAsync("/");
+            
             }
+            if(path.StartsWith("/AddUserRes/"))
+            {
+                       string id_res=path.Substring(12);
+                 string[] id_res_split = id_res.Split(new char[] {'/'},2,StringSplitOptions.RemoveEmptyEntries);
+                 if(id_res_split.Length ==2)
+                 {
+                     int num;
+                     if(int.TryParse(id_res_split[0],out num))
+                     {
+                         if(num < 0) num=1;
+                         if(num > 3) num=1;
+
+                         await downloader1.AddUserAsync(id_res_split[1],(Resolution)num);
+                     }
+                 }
+                // await ctx.SendTextAsync(
+               // $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            //);
+            
+            }
+             if(path.StartsWith("/AddUser/"))
+            {
+                       //string id_res=path.Substring(12);
+                 //string[] id_res_split = id_res.Split(new char[] {'/'},2,StringSplitOptions.RemoveEmptyEntries);
+                 //if(id_res_split.Length ==2)
+                 //{
+                     
+                         await downloader1.AddUserAsync(path.Substring(9),Resolution.PreMuxed);
+                     
+                // }
+                // await ctx.SendTextAsync(
+               // $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            //);
+            
+            }
+            if(path.StartsWith("/AddFile/"))
+            {
+                       //string id_res=path.Substring(12);
+                 //string[] id_res_split = id_res.Split(new char[] {'/'},2,StringSplitOptions.RemoveEmptyEntries);
+                 //if(id_res_split.Length ==2)
+                 //{
+                     
+                         await downloader1.AddFileAsync(path.Substring(9));
+                     
+                // }
+                // await ctx.SendTextAsync(
+               // $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            //);
+            
+            }
+            await ctx.SendRedirectAsync("/");
         }
     }
     internal class ApiStorage : Tesses.WebServer.Server
@@ -332,6 +456,7 @@ namespace Tesses.YouTubeDownloader.Server
                 AddBoth("/AddUser",AddUser);
                 AddBoth("/AddPlaylist",AddPlaylist);
                 AddBoth("/AddVideo",AddVideo);
+                AddBoth("/AddFile",AddFile);
                 AddBoth("/Progress",ProgressFunc);
                 AddBoth("/QueueList",QueueList);
                 AddBoth("/subscribe",Subscribe);
@@ -641,6 +766,28 @@ namespace Tesses.YouTubeDownloader.Server
         public async Task ProgressFunc(ServerContext ctx)
         {
             await ctx.SendJsonAsync(Downloader.GetProgress());
+        }
+        public async Task AddFile(ServerContext ctx)
+        {
+            string url;
+            string downloadStr;
+            bool download=true;
+            if(ctx.QueryParams.TryGetFirst("url",out url))
+            {
+                if(ctx.QueryParams.TryGetFirst("download",out downloadStr))
+                {
+                    bool dl;
+                    if(bool.TryParse(downloadStr,out dl))
+                    {
+                        download=dl;
+                    }
+                }
+
+                await Downloader.AddFileAsync(url,download);
+                  await ctx.SendTextAsync(
+                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
+            );
+            }
         }
          public async Task AddVideo(ServerContext ctx)
         {

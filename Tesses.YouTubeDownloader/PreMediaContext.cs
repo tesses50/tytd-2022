@@ -37,13 +37,13 @@ namespace Tesses.YouTubeDownloader
             SavedChannel channel;
             if(Id.HasValue) //dont check for if(Id != null) hince I was looking for several minutes for the bug
             {
-              string path=$"Channel/{Id.Value}.json";
-              if(await storage.Continue(path))
+              //string path=$"Channel/{Id.Value}.json";
+              if(!storage.ChannelInfoExists(Id.Value))
               {
                   try{
                   channel=await DownloadThumbnails(storage,await storage.YoutubeClient.Channels.GetAsync(Id.Value));
                   //channel=new SavedChannel(i);
-                  await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(channel));
+                  await storage.WriteChannelInfoAsync(channel);
                   }catch(Exception ex)
                   {
                       await storage.GetLogger().WriteAsync(ex);
@@ -51,16 +51,16 @@ namespace Tesses.YouTubeDownloader
                   }
                   return channel;
               }else{
-                  var j=JsonConvert.DeserializeObject<SavedChannel>(await storage.ReadAllTextAsync(path));
+                  var j=await storage.GetChannelInfoAsync(Id.Value);
                   return j;
               }
             }else{
                  var c=await storage.YoutubeClient.Channels.GetByUserAsync(name1);
                 channel=await DownloadThumbnails(storage,c);
-                string path=$"Channel/{c.Id.Value}.json";
-                if(await storage.Continue(path))
+                //string path=$"Channel/{c.Id.Value}.json";
+                if(!storage.ChannelInfoExists(c.Id.Value))
                 {
-                     await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(channel));
+                     await storage.WriteChannelInfoAsync(channel);
 
                 }
                 return channel;
@@ -118,7 +118,7 @@ namespace Tesses.YouTubeDownloader
         public async Task FillQueue(TYTDStorage storage, List<(SavedVideo video, Resolution resolution)> Queue)
         {
     
-            string path=$"Playlist/{Id}.json"; 
+           // string path=$"Playlist/{Id}.json"; 
             List<IVideo> videos=new List<IVideo>();
             try{
             
@@ -134,7 +134,7 @@ namespace Tesses.YouTubeDownloader
                 await cmc.GetChannel(storage);
                 
             }
-            await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(p));
+            await storage.WritePlaylistInfoAsync(p);
             }catch(Exception ex)
             {
                 await storage.GetLogger().WriteAsync(ex);
@@ -146,6 +146,76 @@ namespace Tesses.YouTubeDownloader
                 await context.FillQueue(storage,Queue);
             }
 
+        }
+    }
+    internal class NormalDownloadMediaContext : IMediaContext
+    {
+        public NormalDownloadMediaContext(string url,bool download=true)
+        {
+            this.url=url;
+            this.download=download;
+        }
+        bool download;
+        string url;
+        public async Task FillQueue(TYTDStorage storage, List<(SavedVideo video, Resolution resolution)> Queue)
+        {
+            
+            
+            SavedVideo video=new SavedVideo();
+            if(storage.DownloadExists(url)){
+                video = await storage.GetDownloadInfoAsync(url);
+            }else{
+            video.Id = url;
+            
+            await GetFileNameAsync(storage,video);
+            }
+            lock(Queue){
+            Queue.Add((video,Resolution.PreMuxed));
+            }
+        }
+        private async Task GetFileNameAsync(TYTDStorage storage,SavedVideo video)
+        {
+            string[] uri0=url.Split(new char[]{'?'},2,StringSplitOptions.None);
+            string filename=Path.GetFileName(uri0[0]);
+            System.Net.Http.HttpRequestMessage message=new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head,url);
+            message.Headers.Add("Range","bytes=0-");
+            
+            var head=await storage.HttpClient.SendAsync(message);
+            if(head.Content.Headers.ContentDisposition != null && !string.IsNullOrWhiteSpace(head.Content.Headers.ContentDisposition.FileName))
+            {
+                filename = head.Content.Headers.ContentDisposition.FileName;
+            }
+            long length = 0;
+            if(head.Content.Headers.ContentLength.HasValue)
+            {
+                length = head.Content.Headers.ContentLength.Value;
+            }
+            video.Title = filename;
+            var res=head.StatusCode == System.Net.HttpStatusCode.PartialContent ? "true" : "false";
+            video.DownloadFrom=$"NormalDownload,Length={length},CanSeek={res}";
+            video.AuthorTitle = "NotYouTube";
+            video.AuthorChannelId = "TYTD_FILEDOWNLOAD";
+            List<string> hdrs=new List<string>();
+            foreach(var hdr in head.Content.Headers)
+            {
+               foreach(var item in hdr.Value){
+                hdrs.Add($"{hdr.Key}: {item}");
+               }
+            }
+            string headers=string.Join("\n",hdrs);
+            video.Description=$"File Download on \"{DateTime.Now.ToShortDateString()}\" at \"{DateTime.Now.ToShortTimeString()}\"\nHeaders:\n{headers}";
+            video.Likes=42;
+            video.Dislikes=42;
+            video.Views=42;
+            video.Duration = new TimeSpan(0,0,0);
+            video.Keywords =  new string[] {"FILE"};
+            if(head.Headers.Date.HasValue)
+            {
+                video.UploadDate = head.Headers.Date.Value.DateTime;
+            }
+
+            await storage.WriteVideoInfoAsync(video);
+        
         }
     }
     internal class VideoMediaContext : IMediaContext
@@ -161,15 +231,15 @@ namespace Tesses.YouTubeDownloader
         }
         public async Task FillQueue(TYTDStorage storage,List<(SavedVideo,Resolution)> queue)
         {
-            string path=$"Info/{Id}.json";
+           
             SavedVideo video;
-            if(await storage.Continue(path))
+            if(!storage.VideoInfoExists(Id))
             {
                 try{
                     video = new SavedVideo(await storage.YoutubeClient.Videos.GetAsync(Id));
                     
                     storage.SendBeforeSaveInfo(video);
-                    await storage.WriteAllTextAsync(path,JsonConvert.SerializeObject(video));
+                    await storage.WriteVideoInfoAsync(video);
                     await video.DownloadThumbnails(storage);
                 }catch(Exception ex)
                 {
@@ -179,7 +249,7 @@ namespace Tesses.YouTubeDownloader
                 }
                 
             }else{
-                video = JsonConvert.DeserializeObject<SavedVideo>(await storage.ReadAllTextAsync(path));
+                video = await storage.GetVideoInfoAsync(Id);
             }
             if(storage.GetLoggerProperties().AlwaysDownloadChannel)
             {

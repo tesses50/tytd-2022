@@ -11,9 +11,9 @@
       <PackageId>Tesses.YouTubeDownloader.ExtensionLoader</PackageId>
     <Author>Mike Nolan</Author>
     <Company>Tesses</Company>
-     <Version>1.1.1</Version>
-    <AssemblyVersion>1.1.1</AssemblyVersion>
-    <FileVersion>1.1.1</FileVersion>
+     <Version>1.1.2</Version>
+    <AssemblyVersion>1.1.2</AssemblyVersion>
+    <FileVersion>1.1.2</FileVersion>
     <Description>Load Extensions into TYTD (Not Tested)</Description>
     <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
      <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>

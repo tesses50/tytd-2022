@@ -346,6 +346,11 @@ namespace Tesses.YouTubeDownloader
             if(Downloader != null)
             await Downloader.AddVideoAsync(id,resolution);
         }
+        public async Task AddFileAsync(string url,bool download=true)
+        {
+            if(Downloader != null)
+            await Downloader.AddFileAsync(url,download);
+        }
 
         public async Task AddPlaylistAsync(PlaylistId id, Resolution resolution = Resolution.PreMuxed)
         {
@@ -659,6 +664,33 @@ namespace Tesses.YouTubeDownloader
             StorageAsStorage((e)=>{
                 e.DeletePersonalPlaylist(name);
             });
+        }
+
+
+        public async Task WriteBestStreamInfoAsync(VideoId id, BestStreamInfo.BestStreamsSerialized serialized)
+        {
+            await StorageAsStorageAsync(async(e)=>{
+                await e.WriteBestStreamInfoAsync(id,serialized);
+            });
+        }
+
+        public async Task<BestStreamInfo.BestStreamsSerialized> GetBestStreamInfoAsync(VideoId id)
+        {
+            BestStreamInfo.BestStreamsSerialized s=null;
+            await StorageAsStorageAsync(async(e)=>{
+                s=await e.GetBestStreamInfoAsync(id);
+            });
+            
+            return s;
+        }
+
+        public bool BestStreamInfoExists(VideoId id)
+        {
+            bool res=false;
+            StorageAsStorage((e)=>{
+                res=e.BestStreamInfoExists(id);
+            });
+            return res;
         }
     }
 

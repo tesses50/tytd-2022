@@ -133,7 +133,7 @@ namespace Tesses.YouTubeDownloader
            int count = videos.Count;
           foreach(var v in videos)
           {
-              await storage1.WriteAllTextAsync($"Info/{v.Id}.json",JsonConvert.SerializeObject(v));
+              await storage1.WriteVideoInfoAsync(v);
                       
           }
           

@@ -17,11 +17,11 @@ namespace Tesses.YouTubeDownloader
       public abstract class TYTDBase : ITYTDBase
     {
         
-        public bool PersonalPlaylistExists(string name)
+        public virtual bool PersonalPlaylistExists(string name)
         {
             return FileExists($"PersonalPlaylist/{name}.json");
         }
-        public async IAsyncEnumerable<ListContentItem> GetPersonalPlaylistContentsAsync(string playlist)
+        public virtual async IAsyncEnumerable<ListContentItem> GetPersonalPlaylistContentsAsync(string playlist)
         {
             if(!PersonalPlaylistExists(playlist)) yield break;
             var ls=JsonConvert.DeserializeObject<List<ListContentItem>>(await ReadAllTextAsync($"PersonalPlaylist/{playlist}.json"));
@@ -30,7 +30,7 @@ namespace Tesses.YouTubeDownloader
                 yield return await Task.FromResult(item);
             }
         }
-        public async IAsyncEnumerable<string> GetPersonalPlaylistsAsync()
+        public virtual async IAsyncEnumerable<string> GetPersonalPlaylistsAsync()
         {
             await foreach(var item in EnumerateFilesAsync("PersonalPlaylist"))
             {
@@ -62,7 +62,7 @@ namespace Tesses.YouTubeDownloader
             return FileExistsAsync(path).GetAwaiter().GetResult();
         }
 
-        public async IAsyncEnumerable<string> GetVideoIdsAsync()
+        public virtual async IAsyncEnumerable<string> GetVideoIdsAsync()
         {
             await foreach(var item in EnumerateFilesAsync("Info"))
             {
@@ -73,13 +73,13 @@ namespace Tesses.YouTubeDownloader
             }
         }
 
-        public async Task<SavedVideo> GetVideoInfoAsync(VideoId id)
+        public virtual async Task<SavedVideo> GetVideoInfoAsync(VideoId id)
         {
             
             return JsonConvert.DeserializeObject<SavedVideo>(await ReadAllTextAsync($"Info/{id}.json"));
         }
 
-        public async IAsyncEnumerable<SavedVideo> GetVideosAsync()
+        public virtual async IAsyncEnumerable<SavedVideo> GetVideosAsync()
         {
             await foreach(var item in GetVideoIdsAsync())
             {
@@ -90,7 +90,7 @@ namespace Tesses.YouTubeDownloader
                 }
             }
         }
-        public async IAsyncEnumerable<SavedVideoLegacy> GetLegacyVideosAsync()
+        public virtual async IAsyncEnumerable<SavedVideoLegacy> GetLegacyVideosAsync()
         {
             await foreach(var item in GetVideoIdsAsync())
             {
@@ -101,11 +101,11 @@ namespace Tesses.YouTubeDownloader
                 }
             }
         }
-        public async Task<SavedVideoLegacy> GetLegacyVideoInfoAsync(VideoId id)
+        public virtual async Task<SavedVideoLegacy> GetLegacyVideoInfoAsync(VideoId id)
         {
              return JsonConvert.DeserializeObject<SavedVideoLegacy>(await ReadAllTextAsync($"Info/{id}.json"));
         }
-          public async IAsyncEnumerable<SavedPlaylist> GetPlaylistsAsync()
+          public virtual async IAsyncEnumerable<SavedPlaylist> GetPlaylistsAsync()
         {
             await foreach(var item in GetPlaylistIdsAsync())
             {
@@ -131,7 +131,7 @@ namespace Tesses.YouTubeDownloader
             }
             
         }
-        public async IAsyncEnumerable<string> GetPlaylistIdsAsync()
+        public virtual async IAsyncEnumerable<string> GetPlaylistIdsAsync()
         {
             await foreach(var item in EnumerateFilesAsync("Playlist"))
             {
@@ -141,7 +141,7 @@ namespace Tesses.YouTubeDownloader
                 }
             }
         }
-         public async IAsyncEnumerable<string> GetChannelIdsAsync()
+         public virtual async IAsyncEnumerable<string> GetChannelIdsAsync()
         {
             await foreach(var item in EnumerateFilesAsync("Channel"))
             {
@@ -151,7 +151,7 @@ namespace Tesses.YouTubeDownloader
                 }
             }
         }
-        public async IAsyncEnumerable<VideoId> GetYouTubeExplodeVideoIdsAsync()
+        public virtual async IAsyncEnumerable<VideoId> GetYouTubeExplodeVideoIdsAsync()
         {
             await foreach(var item in GetVideoIdsAsync())
             {
@@ -159,11 +159,11 @@ namespace Tesses.YouTubeDownloader
                 if(id.HasValue) yield return id.Value;
             }
         }
-        public async Task<SavedChannel> GetChannelInfoAsync(ChannelId id)
+        public virtual async Task<SavedChannel> GetChannelInfoAsync(ChannelId id)
         {
             return JsonConvert.DeserializeObject<SavedChannel>(await ReadAllTextAsync($"Channel/{id}.json"));
         }
-        public async IAsyncEnumerable<SavedChannel> GetChannelsAsync()
+        public virtual async IAsyncEnumerable<SavedChannel> GetChannelsAsync()
         {
             await foreach(var item in GetChannelIdsAsync())
             {
@@ -175,24 +175,60 @@ namespace Tesses.YouTubeDownloader
             }
         }
 
-        public bool PlaylistInfoExists(PlaylistId id)
+        public virtual async IAsyncEnumerable<SavedVideo> GetDownloadsAsync()
+        {
+            await foreach(var item in GetDownloadUrlsAsync())
+            {
+                yield return await GetDownloadInfoAsync(item);
+            }
+        }
+        public virtual async IAsyncEnumerable<string> GetDownloadUrlsAsync()
+        {
+            await foreach(var item in EnumerateFilesAsync("FileInfo"))
+            {
+                if(Path.GetExtension(item).Equals(".json",StringComparison.Ordinal))
+                {
+                    yield return B64.Base64UrlDecodes(Path.GetFileNameWithoutExtension(item));
+                }
+            }
+        }
+        public virtual async Task<BestStreamInfo.BestStreamsSerialized> GetBestStreamInfoAsync(VideoId id)
+        {
+            return JsonConvert.DeserializeObject<BestStreamInfo.BestStreamsSerialized>(await ReadAllTextAsync($"StreamInfo/{id.Value}.json"));
+        }
+        public virtual bool BestStreamInfoExists(VideoId id)
+        {
+            return FileExists($"StreamInfo/{id.Value}.json");
+        }
+        public virtual async Task<SavedVideo> GetDownloadInfoAsync(string url)
+        {
+            string enc=$"FileInfo/{B64.Base64UrlEncodes(url)}.json";
+            return JsonConvert.DeserializeObject<SavedVideo>(await ReadAllTextAsync(enc));
+
+        }
+        public virtual bool DownloadExists(string url)
+        {
+            string enc=$"FileInfo/{B64.Base64UrlEncodes(url)}.json";
+            return FileExists(enc);
+        }
+        public virtual bool PlaylistInfoExists(PlaylistId id)
         {
             return FileExists($"Playlist/{id}.json");
         }
-        public bool VideoInfoExists(VideoId id)
+        public virtual bool VideoInfoExists(VideoId id)
         {
             return FileExists($"Info/{id}.json");
         }
-        public bool ChannelInfoExists(ChannelId id)
+        public virtual bool ChannelInfoExists(ChannelId id)
         {
             return FileExists($"Channel/{id}.json");
         }
-        public async Task<SavedPlaylist> GetPlaylistInfoAsync(PlaylistId id)
+        public virtual async Task<SavedPlaylist> GetPlaylistInfoAsync(PlaylistId id)
         {
             return JsonConvert.DeserializeObject<SavedPlaylist>(await ReadAllTextAsync($"Playlist/{id}.json"));
         }
  
-        public async Task<string> ReadAllTextAsync(string file)
+        public virtual async Task<string> ReadAllTextAsync(string file)
         {
             using(var s = await OpenReadAsync(file))
             {
@@ -203,12 +239,12 @@ namespace Tesses.YouTubeDownloader
             }
         }
 
-        public bool DirectoryExists(string path)
+        public virtual bool DirectoryExists(string path)
         {
             return DirectoryExistsAsync(path).GetAwaiter().GetResult();
         }
 
-        public IEnumerable<string> EnumerateFiles(string path)
+        public virtual IEnumerable<string> EnumerateFiles(string path)
         {
             var e = EnumerateFilesAsync(path).GetAsyncEnumerator();
             while(e.MoveNextAsync().GetAwaiter().GetResult())
@@ -216,7 +252,7 @@ namespace Tesses.YouTubeDownloader
                 yield return e.Current;
             }
         }
-        public IEnumerable<string> EnumerateDirectories(string path)
+        public virtual IEnumerable<string> EnumerateDirectories(string path)
         {
             var e = EnumerateDirectoriesAsync(path).GetAsyncEnumerator();
             while(e.MoveNextAsync().GetAwaiter().GetResult())
@@ -748,7 +784,7 @@ namespace Tesses.YouTubeDownloader
     public interface IWritable : IPersonalPlaylistGet, IPersonalPlaylistSet
     {
              public Task WriteAllTextAsync(string path,string data);
-    }
+    }       
 
 
 }

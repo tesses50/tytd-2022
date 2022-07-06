@@ -143,4 +143,6 @@ Tesses.YouTubeDownloader.Net6/config/
 Tesses.YouTubeDownloader.Net6/Playlist/
 Tesses.YouTubeDownloader.Net6/Channel/
 Tesses.YouTubeDownloader.Net6/Subscriptions/
+Tesses.YouTubeDownloader.Net6/Download/
+Tesses.YouTubeDownloader.Net6/FileInfo/
 push

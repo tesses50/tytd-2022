@@ -256,7 +256,15 @@ internal class SegmentedHttpStream : Stream
                 _=ex;
             }
         }
-
+        public async Task AddFileAsync(string url,bool download=true)
+        {
+            try{
+                await client.GetStringAsync($"{url}api/v2/AddFile?url={WebUtility.UrlEncode(url)}&download={download}");
+            }catch(Exception ex)
+            {
+                _=ex;
+            }
+        }
         public override async Task<bool> DirectoryExistsAsync(string path)
         {
            try{
