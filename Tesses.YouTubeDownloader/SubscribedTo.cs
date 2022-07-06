@@ -98,7 +98,7 @@ namespace Tesses.YouTubeDownloader
             LastSubscriptionTime=date;
         }
 
-        public async IAsyncEnumerable<Subscription> GetSubscriptionsAsync()
+        public virtual async IAsyncEnumerable<Subscription> GetSubscriptionsAsync()
         {
             
             await foreach(var item in EnumerateFilesAsync("Subscriptions"))
@@ -128,7 +128,7 @@ namespace Tesses.YouTubeDownloader
             Subscriptions.Add(sub);
             await SaveSubscription(sub);
         }
-        public async Task SaveSubscription(Subscription sub)
+        public virtual async Task SaveSubscription(Subscription sub)
         {
             await WriteAllTextAsync($"Subscriptions/{sub.Id}.json",JsonConvert.SerializeObject(sub));
         }
@@ -142,7 +142,7 @@ namespace Tesses.YouTubeDownloader
         {
             return Subscriptions;
         }
-        public void Unsubscribe(ChannelId id)
+        public virtual void Unsubscribe(ChannelId id)
         {
            Subscription sub= Subscriptions.FirstOrDefault(e=>e.Id==id.Value);
             if(sub != null)
