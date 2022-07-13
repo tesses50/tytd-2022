@@ -14,6 +14,7 @@ namespace Tesses.YouTubeDownloader
 {
     public class VideoDownloadProgress
     {
+       
         public SavedVideo Saved { get; set; }
 
         public Resolution Resolution {get;set;}
@@ -24,7 +25,7 @@ namespace Tesses.YouTubeDownloader
     }
     public class SavedVideoLegacy
     {
-      
+        
         
         public string Id {get;set;}
         public string Title {get;set;}
@@ -69,6 +70,7 @@ namespace Tesses.YouTubeDownloader
     {
         public SavedVideo()
         {
+            TYTDTag="";
             Id = "";
             Title = "";
             AuthorChannelId = "";
@@ -88,6 +90,7 @@ namespace Tesses.YouTubeDownloader
 
         public SavedVideo(Video video)
         {
+            TYTDTag=TYTDStorage.TYTDTag;
             Id=video.Id;
             Title = video.Title;
             AuthorChannelId = video.Author.ChannelId;
@@ -104,6 +107,8 @@ namespace Tesses.YouTubeDownloader
             DownloadFrom="YouTube";
             VideoFrozen=false;
         }
+
+         public string TYTDTag {get;set;}
         public bool LegacyVideo {get;set;}
           public bool VideoFrozen {get;set;}
         
@@ -260,6 +265,7 @@ namespace Tesses.YouTubeDownloader
     {
         public SavedPlaylist()
         {
+            TYTDTag="";
             Title = "";
             AuthorChannelId="";
             AuthorTitle="";
@@ -269,6 +275,7 @@ namespace Tesses.YouTubeDownloader
         }
         public SavedPlaylist(Playlist playlist,List<IVideo> videos)
         {
+            TYTDTag=TYTDStorage.TYTDTag;
             Title = playlist.Title;
             AuthorChannelId = playlist.Author.ChannelId;
             AuthorTitle=playlist.Author.ChannelTitle;
@@ -315,6 +322,7 @@ namespace Tesses.YouTubeDownloader
         public string Id { get; set; }
         public string Description { get; set; }
         public string Title { get; set; }
+         public string TYTDTag {get;set;}
     }
     public class SavedChannel
     {
@@ -322,12 +330,13 @@ namespace Tesses.YouTubeDownloader
         {
             Id=c.Id;
             Title=c.Title;
-        
+            TYTDTag=TYTDStorage.TYTDTag;
         }
         public SavedChannel()
         {
             Id="";
             Title="";
+            TYTDTag="";
         }
         public async IAsyncEnumerable<SavedVideo> GetVideosAsync(TYTDBase baseCls)
         {
@@ -354,6 +363,6 @@ namespace Tesses.YouTubeDownloader
         }
         public string Id { get; set; }
         public string Title { get; set; }
-
+         public string TYTDTag {get;set;}
     }
 }

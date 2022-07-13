@@ -35,6 +35,19 @@ namespace Tesses.YouTubeDownloader
         List<Subscription> Subscriptions {get;set;}
         List<(SavedVideo Video, Resolution Resolution)> QueueList = new List<(SavedVideo Video, Resolution Resolution)>();
         List<IMediaContext> Temporary =new List<IMediaContext>();
+
+        public void WaitTillMediaContentQueueEmpty()
+        {
+            while(true)
+            {
+                lock(Temporary)
+                {
+                    if(Temporary.Count <= 0) return;
+                }
+                Thread.Sleep(100);
+            }
+        }
+        
         private async Task QueueLoop(CancellationToken token)
         {
 

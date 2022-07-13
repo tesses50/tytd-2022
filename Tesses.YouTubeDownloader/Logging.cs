@@ -35,17 +35,27 @@ namespace Tesses.YouTubeDownloader
     }
     public partial class TYTDStorage 
     {
+       
+        protected virtual LoggerProperties ReadLoggerProperties()
+        {
+              string data=ReadAllTextAsync("config/tytdprop.json").GetAwaiter().GetResult();
+                return JsonConvert.DeserializeObject<LoggerProperties>(data);
+        }
+        protected virtual bool LoggerPropertiesExists
+        {
+            get{
+            return FileExists("config/tytdprop.json");
+            }
+        }
+
         public event EventHandler<TYTDErrorEventArgs> Error;
         internal  LoggerProperties Properties {get;set;}
            public LoggerProperties GetProperties()
         {
-           CreateDirectoryIfNotExist("config");
-           CreateDirectoryIfNotExist("config/logs");
-            
-            if(FileExists("config/tytdprop.json"))
+          
+            if(LoggerPropertiesExists)
             {
-                string data=ReadAllTextAsync("config/tytdprop.json").GetAwaiter().GetResult();
-                return JsonConvert.DeserializeObject<LoggerProperties>(data);
+                return ReadLoggerProperties();
             }else{
                 LoggerProperties prop=new LoggerProperties();
                 prop.AddDateInLog=true;
@@ -55,6 +65,8 @@ namespace Tesses.YouTubeDownloader
                 prop.UseLogs=true;
                 prop.SubscriptionInterval=TimeSpan.FromHours(1);
                 prop.AlwaysDownloadChannel = false;
+                prop.AllowExport=false;
+               
                 return prop;
             }
         }
@@ -64,6 +76,7 @@ namespace Tesses.YouTubeDownloader
             {
                 Properties=GetProperties();
             }
+            
             return  Properties;
         }
         internal static LockObj o=new LockObj();
@@ -83,6 +96,7 @@ namespace Tesses.YouTubeDownloader
     }
     public class LoggerProperties
     {
+        public bool AllowExport {get;set;}
         public bool AlwaysDownloadChannel {get;set;}
         public TimeSpan SubscriptionInterval {get;set;}
 
@@ -96,6 +110,8 @@ namespace Tesses.YouTubeDownloader
 
 
         public bool AddDateInLog {get;set;}
+
+        
     }
     public class Logger
     {

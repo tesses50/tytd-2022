@@ -41,7 +41,14 @@ namespace Tesses.YouTubeDownloader
                 await s.WriteAsync(data,0,data.Length,token);
             }
         }
-
+         public static string TYTDTag {get {return _tytd_tag;}}
+         private static string _tytd_tag=_getTYTDTag();
+         private static string _getTYTDTag()
+         {
+            string tag=Environment.GetEnvironmentVariable("TYTD_TAG");
+            if(string.IsNullOrWhiteSpace(tag)) return "UnknownPC";
+            return tag;
+         }
         bool can_download=true;
         public bool CanDownload {get {return can_download;} set {can_download=value;}}
          public IExtensionContext ExtensionContext {get;set;}

@@ -15,6 +15,11 @@ namespace Tesses.YouTubeDownloader
 {
     public interface ITYTDBase : IPersonalPlaylistGet
     {
+        
+        IAsyncEnumerable<string> GetDownloadUrlsAsync();
+        IAsyncEnumerable<SavedVideo> GetDownloadsAsync();
+        Task<SavedVideo> GetDownloadInfoAsync(string url);
+        bool DownloadExists(string path);
         Task<BestStreamInfo.BestStreamsSerialized> GetBestStreamInfoAsync(VideoId id);
         bool BestStreamInfoExists(VideoId id);
         IAsyncEnumerable<string> GetPersonalPlaylistsAsync();

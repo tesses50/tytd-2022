@@ -17,7 +17,7 @@ namespace Tesses.YouTubeDownloader
 {
     public abstract partial class TYTDStorage
     {
-        
+  
         private async Task DownloadLoop(CancellationToken token = default(CancellationToken))
         {
             while (!token.IsCancellationRequested)
@@ -549,7 +549,7 @@ namespace Tesses.YouTubeDownloader
            
             bool ret=false;
             var streams = await BestStreamInfo.GetBestStreams(this, video.Id, token, false); 
-            if(!can_download) return false;
+            
             if(streams != null)
             {
                 if(streams.VideoFrozen)
@@ -562,6 +562,7 @@ namespace Tesses.YouTubeDownloader
 
                 if(await Continue(complete))
                 {
+                    if(!can_download) return false;
                     streams = await BestStreamInfo.GetBestStreams(this,video.Id,token);
                     if(streams != null)
                     {
@@ -649,19 +650,20 @@ namespace Tesses.YouTubeDownloader
             
             bool ret=false;
             var streams = await BestStreamInfo.GetBestStreams(this, video.Id, token, false);
-            if(!can_download) return false;
+            
             if(streams != null)
             {
                 if(streams.VideoFrozen)
                 {
                     throw new Exception($"[TYTD Specific Error] Video is frozen, we wont do anything with the video.\nplease set \"VideoFrozen\": false in the file \"Info/{video.Id}.json\" to fix this problem");
                 }
+                
                 string complete = $"AudioOnly/{video.Id}.{streams.AudioOnlyStreamInfo.Container}";
                 string incomplete = $"AudioOnly/{video.Id}incomplete.{streams.AudioOnlyStreamInfo.Container}";
                 await MoveLegacyStreams(video,streams);
                 if(await Continue(complete))
                 {
-                    
+                    if(!can_download) return false;
                     streams = await BestStreamInfo.GetBestStreams(this,video.Id,token);
                     if(streams != null)
                     {

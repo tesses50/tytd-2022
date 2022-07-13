@@ -10,9 +10,78 @@ using System.IO;
 using System.Text;
 using YoutubeExplode.Playlists;
 using YoutubeExplode.Channels;
+using Tesses.Extensions;
+using YoutubeExplode.Videos.Streams;
+
+namespace Tesses.Extensions
+{
+    public static class Extensions
+    {
+        public static string Substring(this string value,string str)
+        {
+            return value.Substring(str.Length);
+        }
+    }
+}
 
 namespace Tesses.YouTubeDownloader.Server
 {
+ 
+internal static class B64
+{
+    public static string Base64UrlEncodes(string arg)
+    {
+        return Base64UrlEncode(System.Text.Encoding.UTF8.GetBytes(arg));
+    }
+
+    public static string Base64Encode(byte[] arg)
+    {
+        return Convert.ToBase64String(arg);
+    }
+    public static byte[] Base64Decode(string arg)
+    {
+        return Convert.FromBase64String(arg);
+    }
+
+    public static string Base64Encodes(string arg)
+    {
+        return Base64Encode(System.Text.Encoding.UTF8.GetBytes(arg));
+    }
+
+    public  static string Base64UrlEncode(byte[] arg)
+    {
+        string s = Convert.ToBase64String(arg); // Regular base64 encoder
+        s = s.Split('=')[0]; // Remove any trailing '='s
+        s = s.Replace('+', '-'); // 62nd char of encoding
+        s = s.Replace('/', '_'); // 63rd char of encoding
+        return s;
+    }
+    public static string Base64Decodes(string arg)
+    {
+        return System.Text.Encoding.UTF8.GetString(Base64Decode(arg));
+    }
+    public static string Base64UrlDecodes(string arg)
+    {
+        return System.Text.Encoding.UTF8.GetString(Base64UrlDecode(arg));
+    }
+    public static byte[] Base64UrlDecode(string arg)
+    {
+        string s = arg;
+        s = s.Replace('-', '+'); // 62nd char of encoding
+        s = s.Replace('_', '/'); // 63rd char of encoding
+        switch (s.Length % 4) // Pad with trailing '='s
+        {
+            case 0: break; // No pad chars in this case
+            case 2: s += "=="; break; // Two pad chars
+            case 3: s += "="; break; // One pad char
+            default: throw new System.Exception(
+              "Illegal base64url string!");
+        }
+        return Convert.FromBase64String(s); // Standard base64 decoder
+    }
+
+}
+
     internal class ApiV1Server : Tesses.WebServer.Server
     {
         IDownloader downloader1;
@@ -328,7 +397,71 @@ namespace Tesses.YouTubeDownloader.Server
                 var data2=JsonConvert.DeserializeObject<SavedVideo>(data);
                 await ctx.SendJsonAsync(data2.ToLegacy());
             }
-            else*/ if(path.StartsWith("/File/"))
+            else*/
+            if(path.StartsWith("/File/FileInfo/"))
+            {
+                string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/File/FileInfo/")));
+                string url = B64.Base64UrlDecodes(file);
+                if(baseCtl.DownloadExists(url))
+                {
+                    var obj=await baseCtl.GetDownloadInfoAsync(url);
+                   await ctx.SendJsonAsync(obj);
+                }else{
+                    ctx.StatusCode = 404;
+                    ctx.NetworkStream.Close();
+                }
+            }
+            else if(path.StartsWith("/File/Info/"))
+            {
+                string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/File/Info/")));
+                VideoId? id =VideoId.TryParse(file);
+                if(id.HasValue && baseCtl.VideoInfoExists(id.Value))
+                {
+                   var obj=await baseCtl.GetVideoInfoAsync(id.Value);
+                   await ctx.SendJsonAsync(obj);
+                }else{
+                    ctx.StatusCode = 404;
+                    ctx.NetworkStream.Close();
+                }
+            }else if(path.StartsWith("/File/Playlist/"))
+            {
+                string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/File/Playlist/")));
+                PlaylistId? id =PlaylistId.TryParse(file);
+                if(id.HasValue && baseCtl.PlaylistInfoExists(id.Value))
+                {
+                   var obj=await baseCtl.GetPlaylistInfoAsync(id.Value);
+                   await ctx.SendJsonAsync(obj);
+                }else{
+                    ctx.StatusCode = 404;
+                    ctx.NetworkStream.Close();
+                }
+            }else if(path.StartsWith("/File/Channel/"))
+            {
+                string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/File/Channel/")));
+                ChannelId? id =ChannelId.TryParse(file);
+                if(id.HasValue && baseCtl.ChannelInfoExists(id.Value))
+                {
+                    
+                   var obj=await baseCtl.GetChannelInfoAsync(id.Value);
+                   await ctx.SendJsonAsync(obj);
+                }else{
+                    ctx.StatusCode = 404;
+                    ctx.NetworkStream.Close();
+                }
+            }else if(path.StartsWith("/File/StreamInfo/"))
+            {
+                string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/File/Info/")));
+                VideoId? id =VideoId.TryParse(file);
+                if(id.HasValue && baseCtl.BestStreamInfoExists(id.Value))
+                {
+                   var obj=await baseCtl.GetBestStreamInfoAsync(id.Value);
+                   await ctx.SendJsonAsync(obj);
+                }else{
+                    ctx.StatusCode = 404;
+                    ctx.NetworkStream.Close();
+                }
+            }
+            else if(path.StartsWith("/File/"))
             {
                 string file=WebUtility.UrlDecode(path.Substring(6));
                 if(!await baseCtl.FileExistsAsync(file))
@@ -353,15 +486,107 @@ namespace Tesses.YouTubeDownloader.Server
                     await ctx.SendStreamAsync(s);
                 }
             }*/
+            else if(path.StartsWith("/GetFiles/FileInfo") || path.StartsWith("/GetFiles/FileInfo/"))
+            {
+                List<string> urls=new List<string>();
+                await foreach(var url in baseCtl.GetDownloadUrlsAsync())
+                {
+                    urls.Add($"{B64.Base64UrlEncodes(url)}.json");
+                }
+                 await ctx.SendJsonAsync(urls);
+            }
+            else if(path.StartsWith("/GetFiles/Info") || path.StartsWith("/GetFiles/Info/") || path.StartsWith("/GetFiles/StreamInfo") || path.StartsWith("/GetFiles/StreamInfo/"))
+            {
+                bool containsStrmInfo=path.Contains("StreamInfo");
+                List<string> items=new List<string>();
+                await foreach(var vid in baseCtl.GetVideoIdsAsync())
+                {
+                    var vid2=VideoId.TryParse(vid);
+                    
+                    if(!containsStrmInfo || (vid2.HasValue && baseCtl.BestStreamInfoExists(vid2.Value))){
+                        items.Add($"{vid}.json");
+                    }
+                }
+                await ctx.SendJsonAsync(items);
+            }else if(path.StartsWith("/GetFiles/Playlist") || path.StartsWith("/GetFiles/Playlist/"))
+            {
+                
+                List<string> items=new List<string>();
+                await foreach(var vid in baseCtl.GetPlaylistIdsAsync())
+                {
+                    items.Add($"{vid}.json");
+                }
+                await ctx.SendJsonAsync(items);
+            }else if(path.StartsWith("/GetFiles/Channel") || path.StartsWith("/GetFiles/Channel/"))
+            {
+                List<string> items=new List<string>();
+                await foreach(var vid in baseCtl.GetChannelIdsAsync())
+                {
+                    items.Add($"{vid}.json");
+                }
+                await ctx.SendJsonAsync(items);
+            }
             else if(path.StartsWith("/GetFiles/"))
             {
               await ctx.SendJsonAsync(baseCtl.EnumerateFiles( WebUtility.UrlDecode(path.Substring(10))).ToList());
-            }else if(path.StartsWith("/GetDirectories/"))
+            }
+            else if(path.StartsWith("/GetDirectories/"))
             {
                  await ctx.SendJsonAsync(baseCtl.EnumerateDirectories( WebUtility.UrlDecode(path.Substring(16))).ToList());
-            }else if(path.StartsWith("/FileExists-v2/"))
+            }
+             else if(path.StartsWith("/FileExists/StreamInfo/"))
             {
-                await ctx.SendTextAsync(baseCtl.FileExists(WebUtility.UrlDecode(path.Substring(15))) ? "true" : "false","text/plain");
+                string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/FileExists/StreamInfo/")));
+                VideoId? id =VideoId.TryParse(file);
+                if(id.HasValue && baseCtl.BestStreamInfoExists(id.Value))
+                {
+                    await ctx.SendTextAsync( "true","text/plain");
+                }else{
+                    await ctx.SendTextAsync( "false","text/plain");
+                }
+            }
+            else if(path.StartsWith("/FileExists/FileInfo/"))
+            {
+                 string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/FileExists/StreamInfo/")));
+                string url = B64.Base64Decodes(file);
+                
+                if(baseCtl.DownloadExists(url))
+                {
+                    await ctx.SendTextAsync( "true","text/plain");
+                }else{
+                    await ctx.SendTextAsync( "false","text/plain");
+                }
+            }
+            else if(path.StartsWith("/FileExists/Info/"))
+            {
+                string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/FileExists/Info/")));
+                VideoId? id =VideoId.TryParse(file);
+                if(id.HasValue && baseCtl.VideoInfoExists(id.Value))
+                {
+                    await ctx.SendTextAsync( "true","text/plain");
+                }else{
+                    await ctx.SendTextAsync( "false","text/plain");
+                }
+            } else if(path.StartsWith("/FileExists/Playlist/"))
+            {
+                string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/FileExists/Playlist/")));
+                PlaylistId? id =PlaylistId.TryParse(file);
+                if(id.HasValue && baseCtl.PlaylistInfoExists(id.Value))
+                {
+                    await ctx.SendTextAsync( "true","text/plain");
+                }else{
+                    await ctx.SendTextAsync( "false","text/plain");
+                }
+            }else if(path.StartsWith("/FileExists/Channel/"))
+            {
+                string file = Path.GetFileNameWithoutExtension(WebUtility.UrlDecode(path.Substring("/FileExists/Channel/")));
+                ChannelId? id =ChannelId.TryParse(file);
+                if(id.HasValue && baseCtl.ChannelInfoExists(id.Value))
+                {
+                    await ctx.SendTextAsync( "true","text/plain");
+                }else{
+                    await ctx.SendTextAsync( "false","text/plain");
+                }
             }
             else if(path.StartsWith("/FileExists/"))
             {
@@ -369,13 +594,27 @@ namespace Tesses.YouTubeDownloader.Server
             }else if(path.StartsWith("/DirectoryExists/"))
             {
                  await ctx.SendTextAsync(baseCtl.DirectoryExists(WebUtility.UrlDecode(path.Substring(17))) ? "true" : "false","text/plain");
-            }else if(path.StartsWith("/Video/"))
+            }else if(path.StartsWith("/Download/"))
+            {
+                string url = path.Substring("/Download/");
+                if(baseCtl.DownloadExists(url) && baseCtl.DownloadFileExists(url))
+                {
+                            var v = await baseCtl.GetDownloadInfoAsync(url);
+                           string header=GetVideoContentDisposition(v.Title).ToString();
+                           ctx.ResponseHeaders.Add("Content-Disposition",header);
+                            using(var strm = await baseCtl.OpenReadAsync(baseCtl.GetDownloadFile(url)))
+                            {
+                                await ctx.SendStreamAsync(strm,HeyRed.Mime.MimeTypesMap.GetMimeType(v.Title));
+                            }
+                }
+            }
+            else if(path.StartsWith("/Video/"))
             {
                 
                 string id=path.Substring(7);
                 VideoId? id1=VideoId.TryParse(id);
                 if(id1.HasValue){
-                    if(baseCtl.FileExists($"Info/{id1.Value.Value}.json"))
+                    if(baseCtl.VideoInfoExists(id1.Value))
                     {
                         //Console.WriteLine("Id exists");
                         SavedVideo v = await baseCtl.GetVideoInfoAsync(id1.Value);
@@ -397,7 +636,8 @@ namespace Tesses.YouTubeDownloader.Server
                     }
                 }
 
-            }else if(path.StartsWith("/VideoRes/"))
+            }
+            else if(path.StartsWith("/VideoRes/"))
             {
                  string id_res=path.Substring(10);
                  string[] id_res_split = id_res.Split(new char[] {'/'},2,StringSplitOptions.RemoveEmptyEntries);
@@ -415,7 +655,7 @@ namespace Tesses.YouTubeDownloader.Server
 
                      VideoId? id1=VideoId.TryParse(id_res_split[1]);
                 if(id1.HasValue){
-                    if(baseCtl.FileExists($"Info/{id1.Value.Value}.json"))
+                    if(baseCtl.VideoInfoExists(id1.Value))
                     {
                         //Console.WriteLine("Id exists");
                         SavedVideo v = await baseCtl.GetVideoInfoAsync(id1.Value);
@@ -439,6 +679,162 @@ namespace Tesses.YouTubeDownloader.Server
                      }
                  }
             }
+            else if(path.StartsWith("/Watch/"))
+            {
+                
+                string id=path.Substring(7);
+                VideoId? id1=VideoId.TryParse(id);
+                if(id1.HasValue){
+                    int i=0;
+                    alt:
+                    if(i>= 10)
+                    {
+                        ctx.StatusCode=500;
+                        
+                        return;
+                    }
+                    if(baseCtl.VideoInfoExists(id1.Value))
+                    {
+
+                        //Console.WriteLine("Id exists");
+                        SavedVideo v = await baseCtl.GetVideoInfoAsync(id1.Value);
+                     var res=   await BestStreamInfo.GetBestStreams(baseCtl,id1.Value);
+                      string path0=  await BestStreams.GetPathResolution(baseCtl,v,Resolution.PreMuxed);
+                      
+                       if(!string.IsNullOrWhiteSpace(path0) && baseCtl.VideoInfoExists(id1.Value))
+                       {
+                           
+                           //Console.WriteLine("F is not null");
+                           string filename = $"{v.Title}-{Path.GetFileName(path0)}";
+                           string header=GetVideoContentDisposition(filename).ToString();
+                           ctx.ResponseHeaders.Add("Content-Disposition",header);
+                            using(var strm = await baseCtl.OpenReadAsync(path0))
+                            {
+                                await ctx.SendStreamAsync(strm,HeyRed.Mime.MimeTypesMap.GetMimeType(filename));
+                            }
+                       }else{
+                           //stream to browser
+                           string url=res.MuxedStreamInfo.Url;
+                            var b = baseCtl as TYTDStorage;
+                            if(b != null)
+                            {
+                               
+                                string filename = $"{v.Title}-{Path.GetFileName(path0)}";
+                           string header=GetVideoContentDisposition(filename).ToString();
+                           ctx.ResponseHeaders.Add("Content-Disposition",header);
+                            using( var strm=await b.YoutubeClient.Videos.Streams.GetAsync(res.MuxedStreamInfo))
+                            {
+                                await ctx.SendStreamAsync(strm,HeyRed.Mime.MimeTypesMap.GetMimeType(filename));
+                            }
+                            }else{
+                                 ctx.StatusCode=500;
+                                return;
+                            }
+                       }
+                    }else{
+                         var b = baseCtl as TYTDStorage;
+                            if(b != null)
+                            {
+                                var videoInfo=await b.YoutubeClient.Videos.GetAsync(id1.Value);
+                                await b.WriteVideoInfoAsync(new SavedVideo(videoInfo));
+                            }else{
+                                 ctx.StatusCode=500;
+                                return;
+                            }
+                        i++;
+                        goto alt;
+                    }
+                    
+                }
+
+            }
+            else if(path.StartsWith("/WatchRes/"))
+            {
+                  string id_res=path.Substring(10);
+                 string[] id_res_split = id_res.Split(new char[] {'/'},2,StringSplitOptions.RemoveEmptyEntries);
+                 if(id_res_split.Length ==2)
+                 {
+                     int num;
+                     if(int.TryParse(id_res_split[0],out num))
+                     {
+                         if(num < 0) num=1;
+                         if(num > 3) num=1;
+                     VideoId? id1=VideoId.TryParse(id_res_split[1]);
+
+                if(id1.HasValue){
+                    int i=0;
+                    alt:
+                    if(i>= 10)
+                    {
+                        ctx.StatusCode=500;
+                        
+                        return;
+                    }
+                    if(baseCtl.VideoInfoExists(id1.Value))
+                    {
+
+                        //Console.WriteLine("Id exists");
+                        SavedVideo v = await baseCtl.GetVideoInfoAsync(id1.Value);
+                     var res=   await BestStreamInfo.GetBestStreams(baseCtl,id1.Value);
+                      string path0=  await BestStreams.GetPathResolution(baseCtl,v,(Resolution)num);
+                      
+                       if(!string.IsNullOrWhiteSpace(path0) && baseCtl.VideoInfoExists(id1.Value))
+                       {
+                           
+                           //Console.WriteLine("F is not null");
+                           string filename = $"{v.Title}-{Path.GetFileName(path0)}";
+                           string header=GetVideoContentDisposition(filename).ToString();
+                           ctx.ResponseHeaders.Add("Content-Disposition",header);
+                            using(var strm = await baseCtl.OpenReadAsync(path0))
+                            {
+                                await ctx.SendStreamAsync(strm,HeyRed.Mime.MimeTypesMap.GetMimeType(filename));
+                            }
+                       }else{
+                           //stream to browser
+                           
+                            var b = baseCtl as TYTDStorage;
+                            if(b != null)
+                            {
+                               
+                                string filename = $"{v.Title}-{Path.GetFileName(path0)}";
+                           string header=GetVideoContentDisposition(filename).ToString();
+                           ctx.ResponseHeaders.Add("Content-Disposition",header);
+                            IStreamInfo info=res.MuxedStreamInfo;
+                            if(num == 2)
+                            {
+                                info = res.AudioOnlyStreamInfo;
+                            }else if(num == 3){
+                                info = res.VideoOnlyStreamInfo;
+                            }
+
+                            using( var strm=await b.YoutubeClient.Videos.Streams.GetAsync(info))
+                            {
+                                await ctx.SendStreamAsync(strm,HeyRed.Mime.MimeTypesMap.GetMimeType(filename));
+                            }
+                            }else{
+                                 ctx.StatusCode=500;
+                                return;
+                            }
+                       }
+                    }else{
+                         var b = baseCtl as TYTDStorage;
+                            if(b != null)
+                            {
+                                var videoInfo=await b.YoutubeClient.Videos.GetAsync(id1.Value);
+                                await b.WriteVideoInfoAsync(new SavedVideo(videoInfo));
+                            }else{
+                                 ctx.StatusCode=500;
+                                return;
+                            }
+                        i++;
+                        goto alt;
+                    }
+                    
+                }
+
+                }
+                 }
+            }
             else{
                 await NotFoundServer.ServerNull.GetAsync(ctx);
             }
@@ -450,7 +846,7 @@ namespace Tesses.YouTubeDownloader.Server
         public ApiV2Server(IDownloader downloader)
         {
                 this.Downloader=downloader;
-                
+                AddBoth("/Search",Search);
                 AddBoth("/AddItem",AddItem);
                 AddBoth("/AddChannel",AddChannel);
                 AddBoth("/AddUser",AddUser);
@@ -472,6 +868,14 @@ namespace Tesses.YouTubeDownloader.Server
                 Add("/ReplaceList",ReplaceList,"POST");
                 AddBoth("/DeleteList",DeleteList);
                 AddBoth("/SetResolutionInList",SetResolutionInList);
+
+                Add("/export/everything.json",Everything_Export,"GET");
+                Add("/export/videos.json",VideosExport,"GET");
+                Add("/export/playlists.json",PlaylistsExport,"GET");
+                Add("/export/channels.json",ChannelsExport,"GET");
+                Add("/export/filedownloads.json",FilesExport,"GET");
+                Add("/export/subscriptions.json",SubscriptionsExport,"GET");
+                Add("/export/personal_lists.json",PersonalListsExport,"GET");
                 
                 /*
                 public async Task AddToPersonalPlaylistAsync(string name, IEnumerable<(VideoId Id, Resolution Resolution)> items)
@@ -493,6 +897,31 @@ namespace Tesses.YouTubeDownloader.Server
         {
             throw new NotImplementedException();
         }*/
+        }
+
+        private async Task Search(ServerContext ctx)
+        {
+            var dl = Downloader as IStorage;
+            string q;
+            if(ctx.QueryParams.TryGetFirst("q",out q))
+            {
+                bool getInfoBool=false;
+                string getInfo;
+                if(ctx.QueryParams.TryGetFirst("getinfo",out getInfo))
+                {
+                    if(!bool.TryParse(getInfo,out getInfoBool)) getInfoBool=false;
+                }
+                List<SearchResult> results=new List<SearchResult>();
+                await foreach(var vid in dl.SearchYouTubeAsync(q,getInfoBool))
+                {
+                    results.Add(vid);
+                }
+                if(getInfoBool)
+                {
+                    dl.WaitTillMediaContentQueueEmpty();
+                }
+                await ctx.SendJsonAsync(results);
+            }
         }
 
         private void AddBoth(string url,HttpActionAsync action)
@@ -541,7 +970,118 @@ namespace Tesses.YouTubeDownloader.Server
                 $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
             );
         }
-     
+        public async Task Everything_Export(ServerContext ctx)
+        {
+            var storage = Downloader as TYTDStorage;
+            if(storage != null)
+            {
+                if(storage.GetLoggerProperties().AllowExport)
+                {
+                    TYTDExporter exporter=new TYTDExporter(storage);
+                    var res=await exporter.ExportEverythingAsync();
+                    await ctx.SendJsonAsync(res);
+                }else{
+                    ctx.StatusCode=403;
+                    await ctx.SendTextAsync("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Can't Export, Access Denied</title></head><body><h1>Can't Export, Access Denied</h1><p>Call the TYTD adminstrator if you are not the administrator to edit the following</p><hr><p>In file: <i><b>config/tytdprop.json</b></i>, unless overriden in code<br>Change <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">false</font> with <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">true</font></p></body></html>");
+                }
+            }
+        }
+        public async Task VideosExport(ServerContext ctx)
+        {
+            var storage = Downloader as TYTDStorage;
+            if(storage != null)
+            {
+                if(storage.GetLoggerProperties().AllowExport)
+                {
+                    TYTDExporter exporter=new TYTDExporter(storage);
+                    var res=await exporter.ExportVideosAsync();
+                    await ctx.SendJsonAsync(res);
+                }else{
+                    ctx.StatusCode=403;
+                    await ctx.SendTextAsync("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Can't Export, Access Denied</title></head><body><h1>Can't Export, Access Denied</h1><p>Call the TYTD adminstrator if you are not the administrator to edit the following</p><hr><p>In file: <i><b>config/tytdprop.json</b></i>, unless overriden in code<br>Change <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">false</font> with <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">true</font></p></body></html>");
+                }
+            }
+        }
+        public async Task PlaylistsExport(ServerContext ctx)
+        {
+            var storage = Downloader as TYTDStorage;
+            if(storage != null)
+            {
+                if(storage.GetLoggerProperties().AllowExport)
+                {
+                    TYTDExporter exporter=new TYTDExporter(storage);
+                    var res=await exporter.ExportPlaylistsAsync();
+                    await ctx.SendJsonAsync(res);
+                }else{
+                    ctx.StatusCode=403;
+                    await ctx.SendTextAsync("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Can't Export, Access Denied</title></head><body><h1>Can't Export, Access Denied</h1><p>Call the TYTD adminstrator if you are not the administrator to edit the following</p><hr><p>In file: <i><b>config/tytdprop.json</b></i>, unless overriden in code<br>Change <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">false</font> with <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">true</font></p></body></html>");
+                }
+            }
+        }
+        public async Task ChannelsExport(ServerContext ctx)
+        {
+            var storage = Downloader as TYTDStorage;
+            if(storage != null)
+            {
+                if(storage.GetLoggerProperties().AllowExport)
+                {
+                    TYTDExporter exporter=new TYTDExporter(storage);
+                    var res=await exporter.ExportChannelsAsync();
+                    await ctx.SendJsonAsync(res);
+                }else{
+                    ctx.StatusCode=403;
+                    await ctx.SendTextAsync("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Can't Export, Access Denied</title></head><body><h1>Can't Export, Access Denied</h1><p>Call the TYTD adminstrator if you are not the administrator to edit the following</p><hr><p>In file: <i><b>config/tytdprop.json</b></i>, unless overriden in code<br>Change <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">false</font> with <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">true</font></p></body></html>");
+                }
+            }
+        }
+        public async Task FilesExport(ServerContext ctx)
+        {
+            var storage = Downloader as TYTDStorage;
+            if(storage != null)
+            {
+                if(storage.GetLoggerProperties().AllowExport)
+                {
+                    TYTDExporter exporter=new TYTDExporter(storage);
+                    var res=await exporter.ExportDownloadsAsync();
+                    await ctx.SendJsonAsync(res);
+                }else{
+                    ctx.StatusCode=403;
+                    await ctx.SendTextAsync("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Can't Export, Access Denied</title></head><body><h1>Can't Export, Access Denied</h1><p>Call the TYTD adminstrator if you are not the administrator to edit the following</p><hr><p>In file: <i><b>config/tytdprop.json</b></i>, unless overriden in code<br>Change <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">false</font> with <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">true</font></p></body></html>");
+                }
+            }
+        }
+        public async Task SubscriptionsExport(ServerContext ctx)
+        {
+            var storage = Downloader as TYTDStorage;
+            if(storage != null)
+            {
+                if(storage.GetLoggerProperties().AllowExport)
+                {
+                    TYTDExporter exporter=new TYTDExporter(storage);
+                    var res=await exporter.ExportSubscriptionsAsync();
+                    await ctx.SendJsonAsync(res);
+                }else{
+                    ctx.StatusCode=403;
+                    await ctx.SendTextAsync("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Can't Export, Access Denied</title></head><body><h1>Can't Export, Access Denied</h1><p>Call the TYTD adminstrator if you are not the administrator to edit the following</p><hr><p>In file: <i><b>config/tytdprop.json</b></i>, unless overriden in code<br>Change <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">false</font> with <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">true</font></p></body></html>");
+                }
+            }
+        }
+        public async Task PersonalListsExport(ServerContext ctx)
+        {
+            var storage = Downloader as TYTDStorage;
+            if(storage != null)
+            {
+                if(storage.GetLoggerProperties().AllowExport)
+                {
+                    TYTDExporter exporter=new TYTDExporter(storage);
+                    var res=await exporter.ExportPersonalPlaylistsAsync();
+                    await ctx.SendJsonAsync(res);
+                }else{
+                    ctx.StatusCode=403;
+                    await ctx.SendTextAsync("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Can't Export, Access Denied</title></head><body><h1>Can't Export, Access Denied</h1><p>Call the TYTD adminstrator if you are not the administrator to edit the following</p><hr><p>In file: <i><b>config/tytdprop.json</b></i>, unless overriden in code<br>Change <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">false</font> with <font color=\"#ce9178\">&quot;AllowExport&quot;</font>:<font color=\"#569cd6\">true</font></p></body></html>");
+                }
+            }
+        }
         public async Task AddToList(ServerContext ctx)
         {
             

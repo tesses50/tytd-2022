@@ -292,7 +292,10 @@ namespace Tesses.YouTubeDownloader
                e.CreateDirectoryIfNotExist(path);
             });
         }
-
+        public void WaitTillMediaContentQueueEmpty()
+        {
+            StorageAsStorage((e)=>e.WaitTillMediaContentQueueEmpty());
+        }
         public Logger GetLogger()
         {
             Logger logger=null;
@@ -676,21 +679,41 @@ namespace Tesses.YouTubeDownloader
 
         public async Task<BestStreamInfo.BestStreamsSerialized> GetBestStreamInfoAsync(VideoId id)
         {
-            BestStreamInfo.BestStreamsSerialized s=null;
-            await StorageAsStorageAsync(async(e)=>{
-                s=await e.GetBestStreamInfoAsync(id);
-            });
-            
-            return s;
+            return await Storage.GetBestStreamInfoAsync(id);   
         }
 
         public bool BestStreamInfoExists(VideoId id)
         {
-            bool res=false;
-            StorageAsStorage((e)=>{
-                res=e.BestStreamInfoExists(id);
-            });
-            return res;
+            
+            return Storage.BestStreamInfoExists(id);
+        }
+        public bool DownloadExists(string p)
+        {
+            
+            return Storage.DownloadExists(p);
+        }
+
+        public async IAsyncEnumerable<string> GetDownloadUrlsAsync()
+        {
+            await foreach(var url in Storage.GetDownloadUrlsAsync())
+            {
+                yield return url;
+            }
+        }
+
+        
+        
+        public async IAsyncEnumerable<SavedVideo> GetDownloadsAsync()
+        {
+            await foreach(var item in Storage.GetDownloadsAsync())
+            {
+                yield return item;
+            }
+        }
+
+        public async Task<SavedVideo> GetDownloadInfoAsync(string url)
+        {
+            return await Storage.GetDownloadInfoAsync(url);
         }
     }
 

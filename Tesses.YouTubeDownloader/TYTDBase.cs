@@ -11,6 +11,8 @@ using System.IO;
 
 using YoutubeExplode.Playlists;
 using YoutubeExplode.Channels;
+using YoutubeExplode.Search;
+
 namespace Tesses.YouTubeDownloader
 {
   
@@ -206,6 +208,8 @@ namespace Tesses.YouTubeDownloader
             return JsonConvert.DeserializeObject<SavedVideo>(await ReadAllTextAsync(enc));
 
         }
+        
+
         public virtual bool DownloadExists(string url)
         {
             string enc=$"FileInfo/{B64.Base64UrlEncodes(url)}.json";
@@ -321,9 +325,95 @@ namespace Tesses.YouTubeDownloader
             return (VideoId.Parse(item.Id),item.Resolution);
         }
     }
+    public enum MediaType 
+    {
+        Video=0,
+        Playlist=1,
+        Channel=2,
 
+
+    }
+    public class SearchResult
+    {
+        
+        public SearchResult()
+        {
+            Title="";
+            Id="";
+            Type=MediaType.Video;
+        }
+        public SearchResult(ISearchResult result)
+        {
+            var video = result as VideoSearchResult;
+            var playlist = result as PlaylistSearchResult;
+            var channel = result as ChannelSearchResult;
+            if(video != null)
+            {
+                Id=video.Id;
+                Title = video.Title;
+                Type=MediaType.Video;
+            }
+             if(playlist != null)
+            {
+                Id=playlist.Id;
+                Title=playlist.Title;
+                Type=MediaType.Playlist;
+            }
+             if(channel != null)
+            {
+                Id=channel.Id;
+                Title = channel.Title;
+                Type=MediaType.Channel;
+            }
+        }
+       
+        public string Title {get;set;}
+        public string Id {get;set;}
+       
+        public MediaType Type {get;set;}   
+
+        public void AddToQueue(IStorage storage)
+        {
+            switch(Type)
+            {
+                case MediaType.Video:
+                    storage.AddVideoAsync(Id,Resolution.NoDownload);
+                    break;
+                case MediaType.Playlist:
+                    storage.AddPlaylistAsync(Id,Resolution.NoDownload);
+                    break;
+                case MediaType.Channel:
+                    storage.AddChannelAsync(Id,Resolution.NoDownload);
+                    break;
+            }
+        }
+    }
     public static class TYTDManager
     {
+        public static async IAsyncEnumerable<SearchResult> SearchYouTubeAsync(this IStorage  storage,  string query,bool getMediaInfo=true)
+        {
+            await foreach(var vid in storage.YoutubeClient.Search.GetResultsAsync(query))
+            {
+                var res=new SearchResult(vid);
+                if(getMediaInfo)
+                {
+                    res.AddToQueue(storage);
+                }
+                yield return res;
+            }
+        }
+        public static bool DownloadFileExists(this ITYTDBase baseCtl,string url)
+        {
+            return baseCtl.FileExists(GetDownloadFile(url));
+        }
+        public static string GetDownloadFile(this ITYTDBase baseCtl,string url)
+        {
+            return GetDownloadFile(url);
+        }
+        public static string GetDownloadFile(string url)
+        {
+            return $"Download/{B64.Base64UrlEncodes(url)}.bin";
+        }
         /// <summary>
         /// Add Video, Playlist, Channel Or Username
         /// </summary>
