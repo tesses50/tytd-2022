@@ -129,6 +129,9 @@ namespace Tesses.YouTubeDownloader
         
         private async Task DownloadVideoAsync(SavedVideo video, Resolution resolution, CancellationToken token=default(CancellationToken),IProgress<double> progress=null,bool report=true)
         {
+            
+            begin_download:
+            
             try{
                 if(video.DownloadFrom == "YouTube")
                 {
@@ -147,6 +150,7 @@ namespace Tesses.YouTubeDownloader
                     await DownloadVideoOnlyAsync(video,token,progress,report);
                     break;
             }
+            
             }else if(video.DownloadFrom.StartsWith("NormalDownload,Length="))
             {
                 await DownloadFileAsync(video,token,progress,report);
@@ -160,9 +164,23 @@ namespace Tesses.YouTubeDownloader
                     await GetLogger().WriteAsync(ex);
                 }
             }
-
+            cancelDownload=false;
+            if(restartDownload)
+            {
+                restartDownload=false;
+                goto begin_download;
+               
+            }
         }
+        public bool cancelDownload=false;
+        public bool restartDownload=false;
 
+        public void CancelDownload(bool restart=false)
+        {
+            cancelDownload=true;
+            restartDownload=restart;
+        }
+        
         private async Task DownloadFileAsync(SavedVideo video, CancellationToken token, IProgress<double> progress, bool report)
         {
             string incomplete_file_path = $"Download/{B64.Base64UrlEncodes(video.Id)}-incomplete.part";
@@ -371,7 +389,7 @@ namespace Tesses.YouTubeDownloader
             byte[] buffer=new byte[bufferSize];
             do{
                 read=await src.ReadAsync(buffer,0,buffer.Length,token);
-                if(token.IsCancellationRequested)
+                if(token.IsCancellationRequested || restartDownload || cancelDownload)
                 {
                     return false;
                 }
@@ -381,8 +399,8 @@ namespace Tesses.YouTubeDownloader
                 {
                     progress.Report(curPos / len);
                 }
-            }while(read>0 && !token.IsCancellationRequested);
-            if(token.IsCancellationRequested)
+            }while(read>0 && !token.IsCancellationRequested && !restartDownload && !cancelDownload);
+            if(token.IsCancellationRequested || restartDownload || cancelDownload)
             {
                 return false;
             }
@@ -505,17 +523,17 @@ namespace Tesses.YouTubeDownloader
         {
             bool isValid=true;
             isValid=await DownloadVideoOnlyAsync(video,token,progress,report);
-            if(token.IsCancellationRequested || !isValid)
+            if(token.IsCancellationRequested || !isValid || cancelDownload || restartDownload)
             {
                 return;
             }
             isValid = await DownloadAudioOnlyAsync(video,token,progress,report);
-            if(token.IsCancellationRequested || !isValid)
+            if(token.IsCancellationRequested || !isValid || cancelDownload || restartDownload)
             {
                 return;
             }
              var streams=await BestStreamInfo.GetBestStreams(this,video.Id,token,false);
-             if(token.IsCancellationRequested)
+             if(token.IsCancellationRequested || cancelDownload || restartDownload)
              {
                  return;
              }
@@ -568,7 +586,7 @@ namespace Tesses.YouTubeDownloader
                     {
                         using(var strm = await YoutubeClient.Videos.Streams.GetAsync(streams.VideoOnlyStreamInfo,token))
                         {
-                            if(token.IsCancellationRequested)
+                            if(token.IsCancellationRequested || cancelDownload || restartDownload)
                             {
                                 return false;
                             }
@@ -670,7 +688,7 @@ namespace Tesses.YouTubeDownloader
                         
                         using(var strm = await YoutubeClient.Videos.Streams.GetAsync(streams.AudioOnlyStreamInfo,token))
                         {
-                            if(token.IsCancellationRequested)
+                            if(token.IsCancellationRequested || cancelDownload || restartDownload)
                             {
                                 return false;
                             }
@@ -722,7 +740,7 @@ namespace Tesses.YouTubeDownloader
                         
                         using(var strm = await YoutubeClient.Videos.Streams.GetAsync(streams.MuxedStreamInfo,token))
                         {
-                             if(token.IsCancellationRequested)
+                             if(token.IsCancellationRequested || cancelDownload || restartDownload)
                             {
                                 return;
                             }

@@ -10,15 +10,33 @@ using System.IO;
 using YoutubeExplode.Playlists;
 using YoutubeExplode.Channels;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace Tesses.YouTubeDownloader
 {
+    
     public abstract partial class TYTDStorage : TYTDBase, IStorage
     {
+        internal class ConsoleWriterCLS : TextWriter
+        {
+            Action<string> cls;
+            public ConsoleWriterCLS(Action<string> cls)
+            {
+                this.cls=cls;
+            }
+
+            public override Encoding Encoding => Encoding.UTF8;
+            public override void Write(string value)
+            {
+                cls(value);
+            }
+        }
         private static readonly HttpClient _default = new HttpClient();
         public abstract Task<Stream> CreateAsync(string path);
 
         public abstract void CreateDirectory(string path);
+
+        public static bool UseConsole = true;
 
         public TYTDStorage(HttpClient clt)
         {
@@ -26,13 +44,18 @@ namespace Tesses.YouTubeDownloader
             HttpClient=clt;
             YoutubeClient=new YoutubeClient(HttpClient);
             ExtensionContext=null;
-            
+            ConsoleWriter=new ConsoleWriterCLS((e)=>{
+                ConsoleWrite?.Invoke(this,new ConsoleWriteEventArgs(e));
+            });
         }
         public TYTDStorage()
         {
             HttpClient=_default;
              YoutubeClient=new YoutubeClient(HttpClient);
             ExtensionContext=null;
+             ConsoleWriter=new ConsoleWriterCLS((e)=>{
+                ConsoleWrite?.Invoke(this,new ConsoleWriteEventArgs(e));
+            });
         }
         public async Task WriteAllBytesAsync(string path,byte[] data,CancellationToken token=default(CancellationToken))
         {
@@ -41,7 +64,14 @@ namespace Tesses.YouTubeDownloader
                 await s.WriteAsync(data,0,data.Length,token);
             }
         }
+        public EventHandler<ConsoleWriteEventArgs> ConsoleWrite;
+        public TextWriter ConsoleWriter {get; private set;}
          public static string TYTDTag {get {return _tytd_tag;}}
+         public static void SetTYTDTag(string tag)
+         {
+            //for use on mobile phones
+            _tytd_tag= tag;
+         }
          private static string _tytd_tag=_getTYTDTag();
          private static string _getTYTDTag()
          {
@@ -175,6 +205,7 @@ namespace Tesses.YouTubeDownloader
             CreateDirectoryIfNotExist("FileInfo");
             CreateDirectoryIfNotExist("Download");
             CreateDirectoryIfNotExist("StreamInfo");
+             CreateDirectoryIfNotExist("PersonalPlaylist");
         }
         public void StartLoop(CancellationToken token = default(CancellationToken))
         {

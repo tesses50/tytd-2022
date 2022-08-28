@@ -12,6 +12,7 @@ namespace Tesses.YouTubeDownloader
 {
     public interface IDownloader : IPersonalPlaylistSet
     {
+        void CancelDownload(bool restart=false);
         Task AddVideoAsync(VideoId id,Resolution resolution=Resolution.PreMuxed);
         Task AddPlaylistAsync(PlaylistId id,Resolution resolution=Resolution.PreMuxed);
         Task AddChannelAsync(ChannelId id,Resolution resolution=Resolution.PreMuxed);

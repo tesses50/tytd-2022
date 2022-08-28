@@ -507,5 +507,18 @@ internal class SegmentedHttpStream : Stream
                 _=ex;
             }
         }
+
+        public void CancelDownload(bool restart = false)
+        {
+             try{
+                
+                  
+                  client.GetStringAsync($"{url}api/v2/CancelDownload?restart={restart}").GetAwaiter().GetResult();
+            
+            }catch(Exception ex)
+            {
+                _=ex;
+            }
+        }
     }
 }

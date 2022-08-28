@@ -63,6 +63,7 @@ namespace Tesses.YouTubeDownloader
             video.AuthorTitle=AuthorTitle;
             video.Description=Description;
             video.UploadDate = DateTime.Parse(UploadDate);
+            video.Views=Views;
             return video;
         }
     }

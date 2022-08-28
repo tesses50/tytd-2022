@@ -715,6 +715,11 @@ namespace Tesses.YouTubeDownloader
         {
             return await Storage.GetDownloadInfoAsync(url);
         }
+
+        public void CancelDownload(bool restart = false)
+        {
+            Downloader.CancelDownload(restart);
+        }
     }
 
     public class DownloaderMigration

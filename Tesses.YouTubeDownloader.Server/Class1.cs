@@ -21,6 +21,10 @@ namespace Tesses.Extensions
         {
             return value.Substring(str.Length);
         }
+        public static async Task RedirectBackAsync(this ServerContext ctx)
+        {
+            await ctx.SendTextAsync("<script>history.back()</script>\n");
+        }
     }
 }
 
@@ -165,7 +169,7 @@ internal static class B64
                 // await ctx.SendTextAsync(
                // $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
             //);
-            await ctx.SendRedirectAsync("/");
+            
             }
             if(path.StartsWith("/AddItemRes/"))
             {
@@ -252,7 +256,7 @@ internal static class B64
             //);
             
             }
-            await ctx.SendRedirectAsync("/");
+           await ctx.RedirectBackAsync();
         }
     }
     internal class ApiStorage : Tesses.WebServer.Server
@@ -846,6 +850,7 @@ internal static class B64
         public ApiV2Server(IDownloader downloader)
         {
                 this.Downloader=downloader;
+                AddBoth("/CancelDownload",Cancel);
                 AddBoth("/Search",Search);
                 AddBoth("/AddItem",AddItem);
                 AddBoth("/AddChannel",AddChannel);
@@ -899,6 +904,21 @@ internal static class B64
         }*/
         }
 
+        private async Task Cancel(ServerContext ctx)
+        {
+            bool restart=false;
+            string restartString="false";
+            if(ctx.QueryParams.TryGetFirst("restart",out restartString))
+            {
+                if(!bool.TryParse(restartString,out restart))
+                {
+                    restart=false;
+                }
+            }
+            Downloader.CancelDownload(restart);
+            await ctx.RedirectBackAsync();
+        }
+
         private async Task Search(ServerContext ctx)
         {
             var dl = Downloader as IStorage;
@@ -942,9 +962,7 @@ internal static class B64
                 //Downloader.AddToPersonalPlaylistAsync(name);
 
             }
-              await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+            await ctx.RedirectBackAsync();
         }
            public async Task ReplaceList(ServerContext ctx)
         {
@@ -966,9 +984,7 @@ internal static class B64
                 //Downloader.AddToPersonalPlaylistAsync(name);
 
             }
-              await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+             await ctx.RedirectBackAsync();
         }
         public async Task Everything_Export(ServerContext ctx)
         {
@@ -1124,9 +1140,7 @@ internal static class B64
                 //Downloader.AddToPersonalPlaylistAsync(name);
 
             }
-              await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+             await ctx.RedirectBackAsync();
         }
         public async Task DeleteFromList(ServerContext ctx)
         {
@@ -1144,9 +1158,7 @@ internal static class B64
                 }
             }
             }
-              await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+           await ctx.RedirectBackAsync();
         }
          public async Task SetResolutionInList(ServerContext ctx)
         {
@@ -1173,9 +1185,7 @@ internal static class B64
                 }
             }
             }
-              await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+            await ctx.RedirectBackAsync();
         }
         public async Task Subscriptions(ServerContext ctx)
         {
@@ -1189,9 +1199,7 @@ internal static class B64
                      
                  
             }
-               await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+           await ctx.RedirectBackAsync();
         }
         public async Task Resubscribe(ServerContext ctx)
                 {
@@ -1222,9 +1230,7 @@ internal static class B64
                      }
                  }
             }
-             await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+           await ctx.RedirectBackAsync();
         }
 
         public async Task Unsubscribe(ServerContext ctx)
@@ -1249,10 +1255,8 @@ internal static class B64
                      }
                  }
             }
-             await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
-    }
+            await ctx.RedirectBackAsync();
+        }
         public async Task Subscribe(ServerContext ctx)
         {
             IStorage storage = Downloader as IStorage;
@@ -1294,9 +1298,7 @@ internal static class B64
                      }
                  }
             }
-             await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+            await ctx.RedirectBackAsync();
         }
        
         public async Task QueueList(ServerContext ctx)
@@ -1324,9 +1326,7 @@ internal static class B64
                 }
 
                 await Downloader.AddFileAsync(url,download);
-                  await ctx.SendTextAsync(
-                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+                await ctx.RedirectBackAsync();
             }
         }
          public async Task AddVideo(ServerContext ctx)
@@ -1352,11 +1352,9 @@ internal static class B64
                     await Downloader.AddVideoAsync(id1.Value,resolution);
                 }
             }                        
-            await ctx.SendTextAsync(
-                $"<html><head><title>You Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+           await ctx.RedirectBackAsync();
         }    
-            public async Task AddItem(ServerContext ctx)
+        public async Task AddItem(ServerContext ctx)
         {
             string id;
             if(ctx.QueryParams.TryGetFirst("v",out id))
@@ -1374,11 +1372,9 @@ internal static class B64
                     await Downloader.AddItemAsync(id,resolution);
                 
             }                        
-            await ctx.SendTextAsync(
-                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+            await ctx.RedirectBackAsync();
         }    
-                public async Task AddUser(ServerContext ctx)
+        public async Task AddUser(ServerContext ctx)
         {
             string id;
             if(ctx.QueryParams.TryGetFirst("id",out id))
@@ -1398,12 +1394,10 @@ internal static class B64
                     await Downloader.AddUserAsync(id1.Value,resolution);
                 }
             }                        
-            await ctx.SendTextAsync(
-                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+            await ctx.RedirectBackAsync();
         }    
    
-                public async Task AddChannel(ServerContext ctx)
+        public async Task AddChannel(ServerContext ctx)
         {
             string id;
             if(ctx.QueryParams.TryGetFirst("id",out id))
@@ -1423,9 +1417,7 @@ internal static class B64
                     await Downloader.AddChannelAsync(id1.Value,resolution);
                 }
             }                        
-            await ctx.SendTextAsync(
-                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+            await ctx.RedirectBackAsync();
         }    
    
             public async Task AddPlaylist(ServerContext ctx)
@@ -1448,9 +1440,7 @@ internal static class B64
                     await Downloader.AddPlaylistAsync(id1.Value,resolution);
                 }
             }                        
-            await ctx.SendTextAsync(
-                $"<html><head><titleYou Will Be Redirected in 5 Sec</title><meta http-equiv=\"Refresh\" content=\"5; url='../../'\" /></head><body><h1>You Will Be Redirected in 5 Sec</h1></body></html>\n"
-            );
+            await ctx.RedirectBackAsync();
         }    
    
     }

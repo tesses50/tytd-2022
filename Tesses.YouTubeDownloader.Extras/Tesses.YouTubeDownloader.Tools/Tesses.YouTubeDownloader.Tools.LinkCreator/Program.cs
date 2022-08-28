@@ -7,6 +7,7 @@ Resolution res=Resolution.PreMuxed;
 
 bool verbose=false;
 bool isSymlink = false;
+bool isBigExport=false;
 List<string> _args=new List<string>();
 foreach(var arg in args)
 {
@@ -15,6 +16,11 @@ foreach(var arg in args)
     {
         _args.Clear();
         break;
+    }
+    if( (arg.Length >= 2 &&  arg[1] != '-' && arg[0] == '-'  && arg.Contains("g") )|| arg == "--generate-export")
+    {
+        any=true;
+        isBigExport=true;
     }
     if( (arg.Length >= 2 &&  arg[1] != '-' && arg[0] == '-'  && arg.Contains("s") )|| arg == "--symbolic")
     {
@@ -44,6 +50,7 @@ foreach(var arg in args)
         verbose=true;
         
     }
+    
         if(!any)
         _args.Add(arg);
     
@@ -53,7 +60,7 @@ if(argv.Length < 2)
 {
     string app = Path.GetFileNameWithoutExtension(Environment.GetCommandLineArgs()[0]);
 
-    Console.WriteLine($"usage: {app} [-smaVv] <Working> <Destination> [<Resolution>]");
+    Console.WriteLine($"usage: {app} [-smaVvg] <Working> <Destination> [<Resolution>]");
     Console.WriteLine();
     Console.WriteLine("Options:");
     Console.WriteLine("  -s, --symbolic              make symbolic links instead of hard links");
@@ -62,6 +69,7 @@ if(argv.Length < 2)
     Console.WriteLine("  -V, --video-only            set resolution to VideoOnly");
     Console.WriteLine("  -h, --help                  show this help");
     Console.WriteLine("  -v, --verbose               print video names");
+    Console.WriteLine("  -g, --generate-export       Export everything to human readable format");
     Console.WriteLine();
     Console.WriteLine("Positional Arguments:");
     Console.WriteLine("  Working                     the folder containing the Info Directory for TYTD. (required)");
@@ -76,8 +84,52 @@ TYTDCurrentDirectory currentDirectory=new TYTDCurrentDirectory();
 currentDirectory.CanDownload=false;
 
 if(isSymlink){
-await SymlinkGenerator.GenerateSymlinks(currentDirectory,argv[1],res,verbose);
+    if(isBigExport)
+    {
+        string outDir = argv[1];
+        string sd = Path.Combine(outDir,"PreMuxed");
+        string hd = Path.Combine(outDir,"Muxed");
+        string vo = Path.Combine(outDir,"VideoOnly");
+        string ao = Path.Combine(outDir,"AudioOnly");
+        string meta=Path.Combine(outDir,"Meta");
+        
+        List<string> videos=new List<string>();
+        try{
+              await SymlinkGenerator.GenerateSymlinks(currentDirectory,sd,Resolution.PreMuxed,verbose);
+              await SymlinkGenerator.GenerateSymlinks(currentDirectory,hd,Resolution.Mux,verbose);
+              await SymlinkGenerator.GenerateSymlinks(currentDirectory,vo,Resolution.VideoOnly,verbose);
+              await SymlinkGenerator.GenerateSymlinks(currentDirectory,ao,Resolution.AudioOnly,verbose);
+              await SymlinkGenerator.GenerateMeta(videos,currentDirectory,meta,verbose);
+        }catch(Exception ex){
+            _=ex;
+        }
+        File.WriteAllLines(Path.Combine(outDir,"videos.txt"),videos);
+    }else{
+        await SymlinkGenerator.GenerateSymlinks(currentDirectory,argv[1],res,verbose);
+    }
 }else{
-await SymlinkGenerator.GenerateHardLinks(currentDirectory,argv[1],res,verbose);
+    if(isBigExport)
+    {
+        string outDir = argv[1];
+        string sd = Path.Combine(outDir,"PreMuxed");
+        string hd = Path.Combine(outDir,"Muxed");
+        string vo = Path.Combine(outDir,"VideoOnly");
+        string ao = Path.Combine(outDir,"AudioOnly");
+        string meta=Path.Combine(outDir,"Meta");
+        List<string> videos=new List<string>();
+         try{
+              await SymlinkGenerator.GenerateHardLinks(currentDirectory,sd,Resolution.PreMuxed,verbose);
+              await SymlinkGenerator.GenerateHardLinks(currentDirectory,hd,Resolution.Mux,verbose);
+              await SymlinkGenerator.GenerateHardLinks(currentDirectory,vo,Resolution.VideoOnly,verbose);
+              await SymlinkGenerator.GenerateHardLinks(currentDirectory,ao,Resolution.AudioOnly,verbose);
+              await SymlinkGenerator.GenerateMeta(videos,currentDirectory,meta,verbose);
+              File.WriteAllLines(Path.Combine(outDir,"videos.txt"),videos);
+        }catch(Exception ex){
+            _=ex;
+        }
+
+    }else{
+        await SymlinkGenerator.GenerateHardLinks(currentDirectory,argv[1],res,verbose);
+    }
 }
 }

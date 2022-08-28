@@ -131,17 +131,30 @@ namespace Tesses.YouTubeDownloader
         }
         private void WriteStdErr(string message)
         {
-            var col=Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Error.WriteLine(message);
-            Console.ForegroundColor = col;
+            if(TYTDStorage.UseConsole){
+                var col=Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.Error.WriteLine(message);
+                Console.ForegroundColor = col;
+            }else{
+                _storage.ConsoleWriter.WriteLine($"ERROR: {message}");
+            }
         }
         private void WriteStd(string message,bool error)
         {
             if(error)
                 WriteStdErr(message);
-            else
+            else{
+                if(TYTDStorage.UseConsole){
+                var col=Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(message);
+                Console.ForegroundColor = col;
+            }else{
+                _storage.ConsoleWriter.WriteLine(message);
+            }
+            }
+                
         }
         public async Task WriteAsync(string message,bool writeToConsole=false,bool isError=false,bool log=true)
         {
