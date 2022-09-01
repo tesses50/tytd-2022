@@ -30,7 +30,18 @@ namespace Tesses.Extensions
 
 namespace Tesses.YouTubeDownloader.Server
 {
- 
+ using Tesses.YouTubeDownloader;
+
+public class Progress
+{
+    public long Length {get;set;}
+    public double Percent {get;set;}
+    
+    public SavedVideo Video {get;set;}
+
+    public bool StartEvent {get;set;}
+    public bool StopEvent {get;set;}
+}
 internal static class B64
 {
     public static string Base64UrlEncodes(string arg)
@@ -850,6 +861,7 @@ internal static class B64
         public ApiV2Server(IDownloader downloader)
         {
                 this.Downloader=downloader;
+                AddBoth("/event",Event);
                 AddBoth("/CancelDownload",Cancel);
                 AddBoth("/Search",Search);
                 AddBoth("/AddItem",AddItem);
@@ -903,7 +915,55 @@ internal static class B64
             throw new NotImplementedException();
         }*/
         }
-
+        public async Task Event(ServerContext ctx)
+        {
+              IStorage storage=Downloader as IStorage;
+                if(storage != null){
+                
+                var _p=Downloader.GetProgress();
+                    long len = _p.Length;
+                    bool first=true;
+                    
+                    SendEvents evts=new SendEvents();
+                    storage.VideoStarted += (sender,e)=>
+                    {
+                        len=e.EstimatedLength;
+                        Progress p=new Progress();
+                        p.StartEvent=true;
+                        p.StopEvent=false;
+                        p.Length=e.EstimatedLength;
+                        p.Percent=0;
+                       
+                        p.Video=e.VideoInfo;
+                         evts.SendEvent(p);
+                    };
+                    storage.VideoProgress += (sender,e)=>{
+                        Progress p=new Progress();
+                        p.StartEvent=false;
+                        p.StopEvent=false;
+                        p.Length=len;
+                        p.Percent=e.Progress;
+                        if(first)
+                            p.Video=e.VideoInfo;
+                        
+                        first=false;
+                         evts.SendEvent(p);
+                    };
+                    storage.VideoFinished +=(sender,e)=>{
+                        Progress p=new Progress();
+                        p.StartEvent=false;
+                        p.StopEvent=true;
+                        p.Length=len;
+                        p.Percent=1;
+                        p.Video=e.VideoInfo;
+                        evts.SendEvent(p);
+                    };
+                    ctx.ServerSentEvents(evts);
+                }else{
+                    await ctx.SendTextAsync("Error no IStorage");
+                }
+                    
+        }
         private async Task Cancel(ServerContext ctx)
         {
             bool restart=false;
