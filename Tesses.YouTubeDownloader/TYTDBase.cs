@@ -59,9 +59,9 @@ namespace Tesses.YouTubeDownloader
         } 
         
        
-             public bool FileExists(string path)
+        public bool FileExists(string path)
         {
-            return FileExistsAsync(path).GetAwaiter().GetResult();
+            return Task.Run(()=>FileExistsAsync(path)).GetAwaiter().GetResult();
         }
 
         public virtual async IAsyncEnumerable<string> GetVideoIdsAsync()
@@ -213,6 +213,7 @@ namespace Tesses.YouTubeDownloader
         public virtual bool DownloadExists(string url)
         {
             string enc=$"FileInfo/{B64.Base64UrlEncodes(url)}.json";
+
             return FileExists(enc);
         }
         public virtual bool PlaylistInfoExists(PlaylistId id)
@@ -245,7 +246,7 @@ namespace Tesses.YouTubeDownloader
 
         public virtual bool DirectoryExists(string path)
         {
-            return DirectoryExistsAsync(path).GetAwaiter().GetResult();
+            return Task.Run(()=>DirectoryExistsAsync(path)).GetAwaiter().GetResult();
         }
 
         public virtual IEnumerable<string> EnumerateFiles(string path)

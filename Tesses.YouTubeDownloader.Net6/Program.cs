@@ -15,7 +15,7 @@ namespace Tesses.YouTubeDownloader.Net6
             TYTDCurrentDirectory currentDirectory=new TYTDCurrentDirectory(new HttpClient());
             TYTDServer server=new TYTDServer(currentDirectory);
             server.RootServer.Server=new StaticServer("WebSite");
-            currentDirectory.CanDownload=false;
+            currentDirectory.CanDownload=true;
             HttpServerListener listener=new HttpServerListener(new System.Net.IPEndPoint(System.Net.IPAddress.Any,3252),server.InnerServer);
             currentDirectory.StartLoop();
             TYTDStorage.FFmpeg ="/usr/bin/ffmpeg";
