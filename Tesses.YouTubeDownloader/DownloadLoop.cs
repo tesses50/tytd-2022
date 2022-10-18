@@ -40,7 +40,7 @@ namespace Tesses.YouTubeDownloader
              }
             }
         }
-
+        private CancellationTokenSource currentVideoCancelSource=null;
         public readonly SavedVideoProgress Progress = new SavedVideoProgress();
         private async Task ReportProgress(double progress)
         {
@@ -107,7 +107,7 @@ namespace Tesses.YouTubeDownloader
 
         public async Task DownloadNoQueue(SavedVideo info,Resolution resolution=Resolution.Mux,CancellationToken token=default(CancellationToken),IProgress<double> progress=null)
         {
-          
+
                 await DownloadVideoAsync(info,resolution,token,progress,false);
             
         }
@@ -169,7 +169,7 @@ namespace Tesses.YouTubeDownloader
             {
                 restartDownload=false;
                 goto begin_download;
-               
+                
             }
         }
         public bool cancelDownload=false;
@@ -179,6 +179,7 @@ namespace Tesses.YouTubeDownloader
         {
             cancelDownload=true;
             restartDownload=restart;
+            if(currentVideoCancelSource != null) currentVideoCancelSource.Cancel();
         }
         
         private async Task DownloadFileAsync(SavedVideo video, CancellationToken token, IProgress<double> progress, bool report)
@@ -521,6 +522,7 @@ namespace Tesses.YouTubeDownloader
         }
         private async Task DownloadVideoMuxedAsync(SavedVideo video,CancellationToken token,IProgress<double> progress,bool report=true)
         {
+            
             bool isValid=true;
             isValid=await DownloadVideoOnlyAsync(video,token,progress,report);
             if(token.IsCancellationRequested || !isValid || cancelDownload || restartDownload)
@@ -564,9 +566,15 @@ namespace Tesses.YouTubeDownloader
         }
         public async Task<bool> DownloadVideoOnlyAsync(SavedVideo video,CancellationToken token,IProgress<double> progress,bool report=true)
         {
-           
+            currentVideoCancelSource = new CancellationTokenSource();
+            token.Register(()=>{
+                currentVideoCancelSource.Cancel();
+            });
+             
+            
             bool ret=false;
-            var streams = await BestStreamInfo.GetBestStreams(this, video.Id, token, false); 
+            var streams = await BestStreamInfo.GetBestStreams(this, video.Id, currentVideoCancelSource.Token, false);
+          
             
             if(streams != null)
             {
@@ -581,10 +589,12 @@ namespace Tesses.YouTubeDownloader
                 if(await Continue(complete))
                 {
                     if(!can_download) return false;
-                    streams = await BestStreamInfo.GetBestStreams(this,video.Id,token);
+                    streams = await BestStreamInfo.GetBestStreams(this,video.Id,currentVideoCancelSource.Token);
                     if(streams != null)
                     {
-                        using(var strm = await YoutubeClient.Videos.Streams.GetAsync(streams.VideoOnlyStreamInfo,token))
+                         currentVideoCancelSource.CancelAfter(streams.TillExpire - new TimeSpan(0,5,0));
+             
+                        using(var strm = await YoutubeClient.Videos.Streams.GetAsync(streams.VideoOnlyStreamInfo,currentVideoCancelSource.Token))
                         {
                             if(token.IsCancellationRequested || cancelDownload || restartDownload)
                             {
@@ -596,7 +606,9 @@ namespace Tesses.YouTubeDownloader
                             
                             using(var dest = await OpenOrCreateAsync(incomplete))
                             {
-                                ret=await CopyStreamAsync(strm,dest,dest.Length,streams.VideoOnlyStreamInfo.Size.Bytes,4096,progress,token);
+                                ret=await CopyStreamAsync(strm,dest,dest.Length,streams.VideoOnlyStreamInfo.Size.Bytes,4096,progress,currentVideoCancelSource.Token);
+                                currentVideoCancelSource.Dispose();
+                                currentVideoCancelSource=null;
                             }
                             if(ret)
                             {
@@ -665,9 +677,14 @@ namespace Tesses.YouTubeDownloader
         }
         private async Task<bool> DownloadAudioOnlyAsync(SavedVideo video,CancellationToken token,IProgress<double> progress,bool report=true)
         {
+             currentVideoCancelSource = new CancellationTokenSource();
+            token.Register(()=>{
+                currentVideoCancelSource.Cancel();
+            });
             
             bool ret=false;
             var streams = await BestStreamInfo.GetBestStreams(this, video.Id, token, false);
+            
             
             if(streams != null)
             {
@@ -682,11 +699,13 @@ namespace Tesses.YouTubeDownloader
                 if(await Continue(complete))
                 {
                     if(!can_download) return false;
-                    streams = await BestStreamInfo.GetBestStreams(this,video.Id,token);
+                    streams = await BestStreamInfo.GetBestStreams(this,video.Id,currentVideoCancelSource.Token);
+                   
                     if(streams != null)
                     {
-                        
-                        using(var strm = await YoutubeClient.Videos.Streams.GetAsync(streams.AudioOnlyStreamInfo,token))
+                         currentVideoCancelSource.CancelAfter(streams.TillExpire - new TimeSpan(0,5,0));
+             
+                        using(var strm = await YoutubeClient.Videos.Streams.GetAsync(streams.AudioOnlyStreamInfo,currentVideoCancelSource.Token))
                         {
                             if(token.IsCancellationRequested || cancelDownload || restartDownload)
                             {
@@ -698,7 +717,9 @@ namespace Tesses.YouTubeDownloader
                             
                             using(var dest = await OpenOrCreateAsync(incomplete))
                             {
-                                ret=await CopyStreamAsync(strm,dest,dest.Length,streams.AudioOnlyStreamInfo.Size.Bytes,4096,progress,token);
+                                ret=await CopyStreamAsync(strm,dest,dest.Length,streams.AudioOnlyStreamInfo.Size.Bytes,4096,progress,currentVideoCancelSource.Token);
+                                 currentVideoCancelSource.Dispose();
+                                currentVideoCancelSource=null;
                             }
                             if(ret)
                             {
@@ -719,7 +740,14 @@ namespace Tesses.YouTubeDownloader
         }
         private async Task DownloadPreMuxedVideoAsync(SavedVideo video, CancellationToken token,IProgress<double> progress,bool report=true)
         {
-            var streams = await BestStreamInfo.GetBestStreams(this, video.Id, token, false);
+               currentVideoCancelSource = new CancellationTokenSource();
+            token.Register(()=>{
+                currentVideoCancelSource.Cancel();
+            });
+            
+            
+            var streams = await BestStreamInfo.GetBestStreams(this, video.Id, currentVideoCancelSource.Token, false);
+            
             if(!can_download) return;
             if(streams != null)
             {
@@ -734,11 +762,13 @@ namespace Tesses.YouTubeDownloader
                 if(await Continue(complete))
                 {
                    
-                    streams = await BestStreamInfo.GetBestStreams(this,video.Id,token);
+                    streams = await BestStreamInfo.GetBestStreams(this,video.Id,currentVideoCancelSource.Token);
+                   
                     if(streams != null)
                     {
-                        
-                        using(var strm = await YoutubeClient.Videos.Streams.GetAsync(streams.MuxedStreamInfo,token))
+                         currentVideoCancelSource.CancelAfter(streams.TillExpire - new TimeSpan(0,5,0));
+             
+                        using(var strm = await YoutubeClient.Videos.Streams.GetAsync(streams.MuxedStreamInfo,currentVideoCancelSource.Token))
                         {
                              if(token.IsCancellationRequested || cancelDownload || restartDownload)
                             {
@@ -750,7 +780,9 @@ namespace Tesses.YouTubeDownloader
                             bool ret;
                             using(var dest = await OpenOrCreateAsync(incomplete))
                             {
-                                ret=await CopyStreamAsync(strm,dest,dest.Length,streams.MuxedStreamInfo.Size.Bytes,4096,progress,token);
+                                ret=await CopyStreamAsync(strm,dest,dest.Length,streams.MuxedStreamInfo.Size.Bytes,4096,progress,currentVideoCancelSource.Token);
+                                 currentVideoCancelSource.Dispose();
+                                currentVideoCancelSource=null;
                             }
                             //We know its resolution 
                             if(ret)

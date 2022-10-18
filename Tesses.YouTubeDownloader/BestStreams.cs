@@ -11,6 +11,7 @@ namespace Tesses.YouTubeDownloader
 {
     public class BestStreams
     {
+        public TimeSpan TillExpire {get;set;}
         public bool VideoFrozen {get;set;}
         public BestStreamInfo MuxedStreamInfo {get;set;}
 
@@ -88,6 +89,7 @@ namespace Tesses.YouTubeDownloader
                     if(DateTime.Now < serialization.Expires || !expire_check)
                     {
                         BestStreams streams=new BestStreams();
+                        streams.TillExpire = serialization.Expires - DateTime.Now;
                         streams.VideoOnlyStreamInfo = new BestStreamInfo(serialization.VideoOnly);
                         streams.AudioOnlyStreamInfo = new BestStreamInfo(serialization.Audio);
                         streams.MuxedStreamInfo =new BestStreamInfo(serialization.Muxed);
@@ -103,7 +105,7 @@ namespace Tesses.YouTubeDownloader
                     if(video.VideoFrozen)
                     {
                         
-                        return new BestStreams() {VideoFrozen=true,MuxedStreamInfo=null,VideoOnlyStreamInfo=null,AudioOnlyStreamInfo=null};
+                        return new BestStreams() {VideoFrozen=true,MuxedStreamInfo=null,VideoOnlyStreamInfo=null,AudioOnlyStreamInfo=null,TillExpire=new TimeSpan(0,0,0)};
                     }
                 }
             var res=await storage.YoutubeClient.Videos.Streams.GetManifestAsync(id,token);
@@ -114,6 +116,7 @@ namespace Tesses.YouTubeDownloader
             BestStreamsSerialized serialized=new BestStreamsSerialized();
             serialized.Expires=expires;
             BestStreams streams1 = new BestStreams();
+            streams1.TillExpire = new TimeSpan(6,0,0);
             streams1.VideoOnlyStreamInfo=new BestStreamInfo();
             streams1.VideoOnlyStreamInfo.SetInfo(videoOnly);
             serialized.VideoOnly=streams1.VideoOnlyStreamInfo.Serialization;
